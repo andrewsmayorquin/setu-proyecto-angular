@@ -1,1 +1,70 @@
-<p>services works!</p>
+<section class="services-page">
+	<header class="page-header">
+		<div>
+			<h1>Estudiantes</h1>
+			<p>CRUD completo conectado a Firestore.</p>
+		</div>
+	</header>
+
+	<form class="crud-form" [formGroup]="form" (ngSubmit)="saveStudent()">
+		<div class="form-grid">
+			<label class="field">
+				Nombre
+				<input type="text" formControlName="name" placeholder="Nombre completo" />
+			</label>
+			<label class="field">
+				Correo
+				<input type="email" formControlName="email" placeholder="correo@correo.com" />
+			</label>
+			<label class="field">
+				Programa
+				<input type="text" formControlName="program" placeholder="Programa academico" />
+			</label>
+		</div>
+		<div class="form-actions">
+			<button class="btn-primary" type="submit">
+				{{ isEditing() ? 'Actualizar estudiante' : 'Crear estudiante' }}
+			</button>
+			@if (isEditing()) {
+				<button class="btn-secondary" type="button" (click)="cancelEdit()">
+					Cancelar
+				</button>
+			}
+		</div>
+	</form>
+
+	@if (students$ | async; as students) {
+		<div class="table-card">
+			<table class="tabla">
+				<thead>
+					<tr>
+						<th>Nombre</th>
+						<th>Correo</th>
+						<th>Programa</th>
+						<th>Acciones</th>
+					</tr>
+				</thead>
+				<tbody>
+					@for (student of students; track student.id ?? student.email) {
+						<tr>
+							<td>{{ student.name }}</td>
+							<td>{{ student.email }}</td>
+							<td>{{ student.program }}</td>
+							<td>
+								@if (student.id) {
+									<button type="button" class="link-button" (click)="editStudent(student)">Editar</button>
+									<button type="button" class="link-button danger" (click)="removeStudent(student.id)">
+										Eliminar
+									</button>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+			@if (students.length === 0) {
+				<p class="empty-state">No hay estudiantes registrados.</p>
+			}
+		</div>
+	}
+</section>

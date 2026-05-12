@@ -1,0 +1,68 @@
+<div class="dashboard">
+  <app-sidebar />
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <h1>Resultados</h1>
+        <p>Reportes y gráficas de evaluaciones.</p>
+      </div>
+    </header>
+
+    <section class="stats-grid" aria-label="Estadísticas de resultados">
+      <article class="stat-card" aria-label="Promedio general">
+        <span class="stat-number">{{ averageScore() }}%</span>
+        <span class="stat-label">Promedio general</span>
+      </article>
+      <article class="stat-card" aria-label="Reportes generados">
+        <span class="stat-number">{{ reportsCount() }}</span>
+        <span class="stat-label">Reportes generados</span>
+      </article>
+      <article class="stat-card green" aria-label="Ternas destacadas">
+        <span class="stat-number">{{ highlightedTeams() }}</span>
+        <span class="stat-label">Ternas destacadas</span>
+      </article>
+    </section>
+
+    <section class="chart-card" aria-labelledby="chart-title">
+      <h2 id="chart-title">Comparativo por ciclo</h2>
+      @if (cycleStats().length > 0) {
+        <div class="bars" role="img" aria-label="Gráfica de ternas por año">
+          @for (item of cycleStats(); track item.year) {
+            <div class="bar" [style.height.%]="item.height" [attr.aria-label]="item.year + ': ' + item.count + ' ternas'">
+              <span>{{ item.year }}</span>
+              <strong>{{ item.count }}</strong>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="empty-state">Aún no hay datos de ternas para mostrar.</p>
+      }
+    </section>
+
+    <section class="table-card" aria-labelledby="results-table-title">
+      <h2 id="results-table-title">Resultados registrados</h2>
+      <table class="tabla" aria-label="Resultados de evaluaciones">
+        <thead>
+          <tr>
+            <th scope="col">Terna</th>
+            <th scope="col">Estudiante</th>
+            <th scope="col">Calificación</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (result of results(); track result.id ?? result.studentId) {
+            <tr>
+              <td>{{ result.teamName }}</td>
+              <td>{{ result.studentName }}</td>
+              <td>{{ result.score }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (results().length === 0) {
+        <p class="empty-state">No hay resultados registrados.</p>
+      }
+    </section>
+  </main>
+</div>

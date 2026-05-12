@@ -1,1 +1,69 @@
-/* You can add global styles to this file, and also import other style files */
+/* Estilos globales SETU - CEUTEC */
+@use "tippy.js/dist/tippy.css";
+@use "tippy.js/themes/light-border.css";
+@use "ngx-toastr/toastr";
+
+:root {
+  /* Paleta CEUTEC */
+  --color-primary: #C8102E;        /* Rojo CEUTEC */
+  --color-primary-dark: #A00D25;   /* Rojo oscuro */
+  --color-secondary: #002D5C;      /* Azul Marino */
+  --color-secondary-dark: #001D3D; /* Azul más oscuro */
+  
+  /* Colores de apoyo */
+  --color-background: #F5F7FA;
+  --color-white: #FFFFFF;
+  --color-gray-50: #F8FAFC;
+  --color-gray-100: #F1F5F9;
+  --color-gray-200: #E2E8F0;
+  --color-gray-300: #CBD5E1;
+  --color-gray-400: #94A3B8;
+  --color-gray-500: #64748B;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1E293B;
+  --color-gray-900: #0F172A;
+  
+  /* Estados */
+  --color-success: #16A34A;
+  --color-success-light: #DCFCE7;
+  --color-warning: #D97706;
+  --color-warning-light: #FFF7ED;
+  --color-danger: #DC2626;
+  --color-danger-light: #FEE2E2;
+  
+  /* Tipografía */
+  --font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--color-background);
+  color: var(--color-gray-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

@@ -1,0 +1,118 @@
+<div class="dashboard">
+  <app-sidebar />
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <h1>Estudiantes</h1>
+        <p>Listado con búsqueda y filtros rápidos.</p>
+      </div>
+    </header>
+
+    <section class="filters" aria-label="Filtros de búsqueda">
+      <label class="field">
+        Buscar
+        <input type="search" placeholder="Nombre, correo, programa o ID" (input)="setSearch($any($event.target).value)" appTippy="Busca por nombre, correo, programa o ID" />
+      </label>
+      <label class="field">
+        Programa
+        <select (change)="setProgram($any($event.target).value)" appTippy="Filtra por programa académico">
+          <option value="todos">Todos</option>
+          <option value="Ingenieria">Ingeniería</option>
+          <option value="Administracion">Administración</option>
+          <option value="Sistemas">Sistemas</option>
+        </select>
+      </label>
+    </section>
+
+    <form class="crud-form" [formGroup]="form" (ngSubmit)="saveStudent()" aria-label="Formulario de estudiante">
+      <div class="form-grid">
+        <label class="field">
+          Nombre
+          <input type="text" formControlName="name" placeholder="Nombre completo" appTippy="Escribe el nombre completo del estudiante" />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <span class="field-error" role="alert">
+              @if (form.controls.name.errors?.['required']) {
+                El nombre es obligatorio.
+              } @else if (form.controls.name.errors?.['minlength']) {
+                El nombre debe tener al menos 3 caracteres.
+              }
+            </span>
+          }
+        </label>
+        <label class="field">
+          Correo
+          <input type="email" formControlName="email" placeholder="correo&#64;correo.com" appTippy="Ingresa un correo válido" />
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <span class="field-error" role="alert">
+              @if (form.controls.email.errors?.['required']) {
+                El correo es obligatorio.
+              } @else if (form.controls.email.errors?.['email']) {
+                Ingresa un correo electrónico válido.
+              }
+            </span>
+          }
+        </label>
+        <label class="field">
+          Programa
+          <input type="text" formControlName="program" placeholder="Programa académico" appTippy="Ejemplo: Ingeniería, Sistemas" />
+          @if (form.controls.program.touched && form.controls.program.invalid) {
+            <span class="field-error" role="alert">
+              @if (form.controls.program.errors?.['required']) {
+                El programa es obligatorio.
+              } @else if (form.controls.program.errors?.['minlength']) {
+                El programa debe tener al menos 2 caracteres.
+              }
+            </span>
+          }
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" type="submit" [disabled]="form.invalid" [attr.aria-disabled]="form.invalid">
+          {{ isEditing() ? 'Actualizar estudiante' : 'Crear estudiante' }}
+        </button>
+        @if (isEditing()) {
+          <button class="btn-secondary" type="button" (click)="cancelEdit()">
+            Cancelar
+          </button>
+        }
+      </div>
+    </form>
+
+    <section class="table-card" aria-labelledby="students-table-title">
+      <h2 id="students-table-title" class="sr-only">Listado de estudiantes</h2>
+      <table class="tabla" aria-label="Estudiantes registrados">
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Correo</th>
+            <th scope="col">Programa</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (student of students(); track student.id ?? student.email) {
+            <tr>
+              <td>{{ student.name }}</td>
+              <td>{{ student.email }}</td>
+              <td>{{ student.program }}</td>
+              <td>
+                @if (student.id) {
+                  <button type="button" class="link-button" (click)="editStudent(student)" [attr.aria-label]="'Editar ' + student.name" appTippy="Editar estudiante">
+                    Editar
+                  </button>
+                  <button type="button" class="link-button danger" (click)="removeStudent(student.id)" [attr.aria-label]="'Eliminar ' + student.name" appTippy="Eliminar estudiante">
+                    Eliminar
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (students().length === 0) {
+        <p class="empty-state">No hay estudiantes registrados.</p>
+      }
+    </section>
+  </main>
+</div>

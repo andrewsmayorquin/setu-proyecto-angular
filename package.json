@@ -11,22 +11,33 @@
   "private": true,
   "packageManager": "npm@11.12.1",
   "dependencies": {
+    "@angular/animations": "^21.2.0",
     "@angular/common": "^21.2.0",
     "@angular/compiler": "^21.2.0",
     "@angular/core": "^21.2.0",
+    "@angular/fire": "^21.0.0-rc.0",
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "firebase": "^12.13.0",
+    "ngx-toastr": "^19.1.0",
     "rxjs": "~7.8.0",
+    "tippy.js": "^6.3.7",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@angular/build": "^21.2.8",
+    "@angular/build": "^21.2.9",
     "@angular/cli": "^21.2.8",
     "@angular/compiler-cli": "^21.2.0",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
+  },
+  "overrides": {
+    "@angular/platform-browser-dynamic": "^21.2.0",
+    "@angular/fire": {
+      "@angular/platform-browser-dynamic": "^21.2.0"
+    }
   }
 }

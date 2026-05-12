@@ -1,0 +1,89 @@
+<div class="dashboard">
+  <app-sidebar />
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <h1>Evaluadores</h1>
+        <p>Registro y asignación del personal evaluador.</p>
+      </div>
+    </header>
+
+    <section class="filters" aria-label="Filtros de búsqueda">
+      <label class="field">
+        Buscar
+        <input type="search" placeholder="Nombre, correo o ID" (input)="setSearch($any($event.target).value)" appTippy="Busca por nombre, correo o ID" />
+      </label>
+    </section>
+
+    <section class="card" aria-labelledby="evaluator-form-title">
+      <h2 id="evaluator-form-title">{{ isEditing() ? 'Editar evaluador' : 'Registrar evaluador' }}</h2>
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="saveEvaluator()" aria-label="Formulario de evaluador">
+        <label class="field">
+          Nombre
+          <input type="text" placeholder="Nombre completo" formControlName="name" appTippy="Nombre completo del evaluador" />
+        </label>
+        <label class="field">
+          Correo
+          <input type="email" placeholder="correo&#64;correo.com" formControlName="email" appTippy="Correo institucional o personal" />
+        </label>
+        <label class="field">
+          Especialidad
+          <input type="text" placeholder="Área de conocimiento" formControlName="specialty" appTippy="Ejemplo: Sistemas, Administración" />
+        </label>
+        <label class="field checkbox">
+          <input type="checkbox" formControlName="active" appTippy="Marca si el evaluador está activo" />
+          Activo
+        </label>
+        <div class="form-actions">
+          <button class="btn-primary" type="submit" [disabled]="form.invalid" [attr.aria-disabled]="form.invalid">
+            {{ isEditing() ? 'Actualizar' : 'Guardar evaluador' }}
+          </button>
+          @if (isEditing()) {
+            <button class="btn-secondary" type="button" (click)="cancelEdit()">Cancelar</button>
+          }
+        </div>
+      </form>
+    </section>
+
+    <section class="table-card" aria-labelledby="evaluators-table-title">
+      <h2 id="evaluators-table-title">Evaluadores registrados</h2>
+      <table class="tabla" aria-label="Lista de evaluadores">
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Especialidad</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (evaluator of evaluators(); track evaluator.id ?? evaluator.email) {
+            <tr>
+              <td>{{ evaluator.name }}</td>
+              <td>{{ evaluator.specialty }}</td>
+              <td>
+                <span class="badge" [class.badge-ok]="evaluator.active" [class.badge-pending]="!evaluator.active">
+                  {{ evaluator.active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td>
+                @if (evaluator.id) {
+                  <button class="link-button" type="button" (click)="editEvaluator(evaluator)" [attr.aria-label]="'Editar ' + evaluator.name" appTippy="Editar evaluador">
+                    Editar
+                  </button>
+                  <button class="link-button danger" type="button" (click)="removeEvaluator(evaluator.id)" [attr.aria-label]="'Eliminar ' + evaluator.name" appTippy="Eliminar evaluador">
+                    Eliminar
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (evaluators().length === 0) {
+        <p class="empty-state">No hay evaluadores registrados.</p>
+      }
+    </section>
+  </main>
+</div>

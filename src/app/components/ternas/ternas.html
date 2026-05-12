@@ -1,0 +1,139 @@
+<div class="dashboard">
+  <app-sidebar />
+
+  <main class="main-content">
+    <header class="topbar">
+      <h1>Gestión de ternas</h1>
+      <p>Administra grupos, miembros y fechas clave.</p>
+    </header>
+
+    <section class="filters" aria-label="Filtros de búsqueda">
+      <label class="field">
+        Buscar
+        <input type="search" placeholder="Nombre o ID de la terna" (input)="setSearch($any($event.target).value)" appTippy="Busca por nombre o ID de la terna" />
+      </label>
+    </section>
+
+    <section class="section" aria-labelledby="ternas-form-title">
+      <h2 id="ternas-form-title">{{ isEditing() ? 'Editar terna' : 'Crear terna' }}</h2>
+      <form class="crud-form" [formGroup]="form" (ngSubmit)="saveTeam()" aria-label="Formulario de terna">
+        <div class="form-grid">
+          <label class="field">
+            Nombre
+            <input type="text" formControlName="name" placeholder="Nombre de la terna" appTippy="Nombre descriptivo de la terna (mínimo 3 caracteres)" />
+            @if (form.controls.name.touched && form.controls.name.invalid) {
+              <span class="field-error" role="alert">
+                @if (form.controls.name.errors?.['required']) {
+                  El nombre de la terna es obligatorio.
+                } @else if (form.controls.name.errors?.['minlength']) {
+                  El nombre debe tener al menos 3 caracteres.
+                }
+              </span>
+            }
+          </label>
+          <label class="field">
+            Fecha
+            <input type="date" formControlName="date" appTippy="Fecha programada para la evaluación" />
+            @if (form.controls.date.touched && form.controls.date.invalid) {
+              <span class="field-error" role="alert">La fecha es obligatoria.</span>
+            }
+          </label>
+          <label class="field">
+            Estudiantes
+            <select multiple formControlName="studentIds" size="4" appTippy="Selecciona al menos un estudiante (mantén Ctrl para seleccionar varios)" aria-label="Seleccionar estudiantes">
+              @for (student of students(); track student.id ?? student.email) {
+                <option [value]="student.id">{{ student.name }} ({{ student.program }})</option>
+              }
+            </select>
+            @if (form.controls.studentIds.touched && form.controls.studentIds.invalid) {
+              <span class="field-error" role="alert">Selecciona al menos un estudiante.</span>
+            }
+            @if (students().length === 0) {
+              <span class="field-warning">No hay estudiantes registrados. Regístralos primero.</span>
+            }
+          </label>
+          <label class="field">
+            Evaluadores
+            <select multiple formControlName="evaluatorIds" size="4" appTippy="Selecciona al menos dos evaluadores (mantén Ctrl para seleccionar varios)" aria-label="Seleccionar evaluadores">
+              @for (evaluator of evaluators(); track evaluator.id ?? evaluator.email) {
+                <option [value]="evaluator.id">{{ evaluator.name }} ({{ evaluator.specialty }})</option>
+              }
+            </select>
+            @if (form.controls.evaluatorIds.touched && form.controls.evaluatorIds.invalid) {
+              <span class="field-error" role="alert">Selecciona al menos dos evaluadores.</span>
+            }
+            @if (evaluators().length === 0) {
+              <span class="field-warning">No hay evaluadores registrados. Regístralos primero.</span>
+            }
+          </label>
+          <label class="field">
+            Estado
+            <select formControlName="status" appTippy="Define el estado de la terna">
+              <option value="pending">En progreso</option>
+              <option value="completed">Completada</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" type="submit" [disabled]="saving()" [appTippy]="form.invalid ? submitHint() : (isEditing() ? 'Guardar cambios en Firestore' : 'Crear terna en Firestore')">
+            @if (saving()) {
+              Guardando...
+            } @else {
+              {{ isEditing() ? 'Actualizar terna' : 'Crear terna' }}
+            }
+          </button>
+          @if (isEditing()) {
+            <button class="btn-secondary" type="button" (click)="cancelEdit()">
+              Cancelar
+            </button>
+          }
+        </div>
+        @if (form.invalid && form.dirty) {
+          <p class="form-hint" role="status">{{ submitHint() }}</p>
+        }
+      </form>
+
+      <table class="tabla" aria-label="Lista de ternas">
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Estudiantes</th>
+            <th scope="col">Evaluadores</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (team of teams(); track team.id ?? team.name) {
+            <tr>
+              <td>{{ team.name }}</td>
+              <td>{{ team.date }}</td>
+              <td>{{ team.studentIds.length }}</td>
+              <td>{{ team.evaluatorIds.length }}</td>
+              <td>
+                <span class="badge" [class.badge-ok]="team.status === 'completed'"
+                  [class.badge-pending]="team.status === 'pending'">
+                  {{ team.status === 'completed' ? 'Completada' : 'En progreso' }}
+                </span>
+              </td>
+              <td>
+                @if (team.id) {
+                  <button type="button" class="link-button" (click)="editTeam(team)" [attr.aria-label]="'Editar ' + team.name" appTippy="Editar terna">
+                    Editar
+                  </button>
+                  <button type="button" class="link-button danger" (click)="removeTeam(team.id)" [attr.aria-label]="'Eliminar ' + team.name" appTippy="Eliminar terna">
+                    Eliminar
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (teams().length === 0) {
+        <p class="empty-state">No hay ternas registradas.</p>
+      }
+    </section>
+  </main>
+</div>

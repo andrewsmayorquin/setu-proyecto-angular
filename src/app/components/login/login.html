@@ -1,18 +1,24 @@
-<div class="login-container">
-  <div class="login-card">
-    <div class="logo">SETU</div>
-    <p class="subtitle">Sistema de Evaluación de Ternas Universitarias</p>
+<div class="login-container" role="main">
+  <form class="login-card" [formGroup]="form" (ngSubmit)="submit()" aria-labelledby="login-title">
+    <div class="logo" aria-hidden="true">SETU</div>
+    <h1 id="login-title" class="subtitle">Sistema de Evaluación de Ternas Universitarias</h1>
 
-    <div class="field">
-      <label>Usuario</label>
-      <input type="text" placeholder="admin" />
-    </div>
+    <label class="field">
+      <span>Usuario</span>
+      <input type="text" placeholder="admin" formControlName="username" autocomplete="username" />
+    </label>
 
-    <div class="field">
-      <label>Contraseña</label>
-      <input type="password" placeholder="••••••••" />
-    </div>
+    <label class="field">
+      <span>Contraseña</span>
+      <input type="password" placeholder="admin" formControlName="password" autocomplete="current-password" />
+    </label>
 
-    <button class="btn-login">Iniciar sesión</button>
-  </div>
+    @if (errorMessage()) {
+      <p class="error" role="alert" aria-live="assertive">{{ errorMessage() }}</p>
+    }
+
+    <button class="btn-login" type="submit" [disabled]="form.invalid" [attr.aria-disabled]="form.invalid">
+      Iniciar sesión
+    </button>
+  </form>
 </div>

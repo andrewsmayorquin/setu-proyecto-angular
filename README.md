@@ -1,59 +1,58 @@
-# SETUProyect
+# SETU - Sistema de Evaluación de Ternas Universitarias
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.8.
+SETU es una plataforma web diseñada para digitalizar y optimizar el proceso de calificación de defensas de tesis y proyectos de grado. El sistema permite centralizar la información de estudiantes, automatizar el cálculo de notas ponderadas y facilitar la evaluación en tiempo real para los jurados.
 
-## Development server
+## 1. Información General
 
-To start a local development server, run:
+- **Asignatura:** 862 Tecnologías Emergentes
+- **Catedrático:** Ing. Gerson Velasquez
+- **Semana:** 2 (Avance 3)
+- **Fecha:** 4 de mayo de 2026
 
-```bash
-ng serve
-```
+## 2. Equipo de Desarrollo
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- Allan Reynaldo Andrews Mayorquin - 32241172
+- Aldair Alessandro Burgos Villalobos - 61911698
+- Fernanda Nicole Dubón - 62311253
 
-## Code scaffolding
+## 3. Estado del Proyecto (Avance 3 - Tarea 3.1)
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+En esta etapa, se ha consolidado la infraestructura base y la conexión con el backend. Se han cumplido los siguientes requisitos técnicos:
 
-```bash
-ng generate component component-name
-```
+### 🛠️ Implementación Técnica
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+- **Conexión a Firebase:** Integración completa mediante API Keys en Angular. Base de datos Firestore habilitada y operativa.
+- **Servicios en Angular:**
+  - `EstudiantesService`: Maneja la persistencia de los datos de los candidatos.
+  - `EvaluadoresService`: Gestiona el registro de los docentes jurados.
+- **Operaciones CRUD:** Implementación completa (Crear, Leer, Actualizar, Eliminar) para las colecciones de Estudiantes y Evaluadores.
+- **Versionamiento:** Uso estricto de ramas (`feature/`) y Pull Requests para el flujo de trabajo.
 
-```bash
-ng generate --help
-```
+### 🚀 Despliegue
 
-## Building
+La aplicación se encuentra publicada y funcional en el siguiente enlace:
+- **Firebase Hosting:** [INSERTAR-URL-AQUÍ]
 
-To build the project run:
+## 4. Alcance del Sistema (Visión Final)
 
-```bash
-ng build
-```
+El sistema completo integrará los siguientes módulos:
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+- **Módulo Administrativo:** Configuración de eventos, definición de rúbricas con escala 1-5, y monitor de progreso en tiempo real.
+- **Módulo de Evaluación:** Portal optimizado para dispositivos móviles (Mobile-First) donde los jurados califican mediante formularios ágiles.
+- **Motor de Ponderación:** Cálculo automático basado en la fórmula:
+  $$Nota Final = \frac{\sum_{i=1}^{n} (\frac{S_i}{C \times 5})}{n} \times P_{max}$$
 
-## Running unit tests
+## 5. Requisitos del Sistema
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Para ejecutar este proyecto localmente:
 
-```bash
-ng test
-```
+1.  Clonar el repositorio.
+2.  Ejecutar `npm install` para instalar las dependencias.
+3.  Configurar el archivo `src/environments/environment.ts` con las credenciales de Firebase.
+4.  Correr el servidor local con `ng serve`.
 
-## Running end-to-end tests
+## 6. Estructura de Datos (Firestore)
 
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- **Estudiantes:** `nombre`, `asesorTecnico`, `asesorTematico`, `urlTesis`, `idTerna`.
+- **Evaluadores:** `nombre`, `idTerna`.
+- **Ternas:** `nombreTerna`, `fecha`, `ponderacionMax`.

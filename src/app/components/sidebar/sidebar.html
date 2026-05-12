@@ -1,0 +1,26 @@
+<aside class="sidebar" aria-label="Menú principal">
+  <div class="sidebar-logo" aria-hidden="true">SETU</div>
+  @if (isAuthenticated()) {
+    <nav class="sidebar-nav" aria-label="Navegación principal">
+      <a class="nav-item" routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" aria-label="Panel de control">
+        Panel de control
+      </a>
+      <a class="nav-item" routerLink="/ternas" routerLinkActive="active" aria-label="Gestión de ternas">
+        Ternas
+      </a>
+      <a class="nav-item" routerLink="/estudiantes" routerLinkActive="active" aria-label="Gestión de estudiantes">
+        Estudiantes
+      </a>
+      <a class="nav-item" routerLink="/evaluadores" routerLinkActive="active" aria-label="Gestión de evaluadores">
+        Evaluadores
+      </a>
+      <a class="nav-item" routerLink="/resultados" routerLinkActive="active" aria-label="Ver resultados">
+        Resultados
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <span>Admin</span>
+      <button type="button" (click)="logout()" aria-label="Cerrar sesión">Salir</button>
+    </div>
+  }
+</aside>

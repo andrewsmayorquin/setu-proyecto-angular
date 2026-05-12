@@ -1,12 +1,22 @@
-import { Component, signal } from '@angular/core';
-import { RouterLinkWithHref, RouterOutlet, RouterLinkActive } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLinkWithHref, RouterLinkActive],
+  imports: [RouterOutlet],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrl: './app.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class App {
-  protected readonly title = signal('SETU-Proyect');
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  readonly isAuthenticated = this.auth.isAuthenticated;
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
 }

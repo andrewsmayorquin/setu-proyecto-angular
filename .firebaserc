@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "setu-proyecto"
-  }
+    "default": "setu-proyecto",
+    "setu-proyecto ": "setu-proyecto-f967e"
+  },
+  "targets": {},
+  "etags": {}
 }
