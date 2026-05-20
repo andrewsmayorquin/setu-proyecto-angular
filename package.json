@@ -33,11 +33,5 @@
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
-  },
-  "overrides": {
-    "@angular/platform-browser-dynamic": "^21.2.0",
-    "@angular/fire": {
-      "@angular/platform-browser-dynamic": "^21.2.0"
-    }
   }
 }
