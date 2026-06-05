@@ -1,26 +1,60 @@
 <aside class="sidebar" aria-label="Menú principal">
-  <div class="sidebar-logo" aria-hidden="true">SETU</div>
+  <header class="sidebar-logo">
+    <h2>SETU</h2>
+  </header>
+
   @if (isAuthenticated()) {
     <nav class="sidebar-nav" aria-label="Navegación principal">
-      <a class="nav-item" routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" aria-label="Panel de control">
+      <a
+        class="nav-item"
+        routerLink="/home"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        aria-label="Panel de control">
         Panel de control
       </a>
-      <a class="nav-item" routerLink="/ternas" routerLinkActive="active" aria-label="Gestión de ternas">
+
+      <a
+        class="nav-item"
+        routerLink="/ternas"
+        routerLinkActive="active"
+        aria-label="Gestión de ternas">
         Ternas
       </a>
-      <a class="nav-item" routerLink="/estudiantes" routerLinkActive="active" aria-label="Gestión de estudiantes">
+
+      <a
+        class="nav-item"
+        routerLink="/estudiantes"
+        routerLinkActive="active"
+        aria-label="Gestión de estudiantes">
         Estudiantes
       </a>
-      <a class="nav-item" routerLink="/evaluadores" routerLinkActive="active" aria-label="Gestión de evaluadores">
+
+      <a
+        class="nav-item"
+        routerLink="/evaluadores"
+        routerLinkActive="active"
+        aria-label="Gestión de evaluadores">
         Evaluadores
       </a>
-      <a class="nav-item" routerLink="/resultados" routerLinkActive="active" aria-label="Ver resultados">
+
+      <a
+        class="nav-item"
+        routerLink="/resultados"
+        routerLinkActive="active"
+        aria-label="Ver resultados">
         Resultados
       </a>
     </nav>
-    <div class="sidebar-footer">
-      <span>Admin</span>
-      <button type="button" (click)="logout()" aria-label="Cerrar sesión">Salir</button>
-    </div>
+
+    <footer class="sidebar-footer">
+      <p>Admin</p>
+      <button
+        type="button"
+        (click)="logout()"
+        aria-label="Cerrar sesión">
+        Salir
+      </button>
+    </footer>
   }
 </aside>

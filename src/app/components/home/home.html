@@ -2,28 +2,44 @@
   <app-sidebar />
 
   <main class="main-content">
-    <div class="topbar">
+    <header class="topbar">
       <h1>Panel de control</h1>
-      <a class="btn-primary" routerLink="/ternas" aria-label="Crear nueva terna">Crear nueva terna</a>
-    </div>
+      <a
+        class="btn-primary"
+        routerLink="/ternas"
+        aria-label="Crear nueva terna">
+        Crear nueva terna
+      </a>
+    </header>
 
-    <section class="stats-grid" aria-label="Estadísticas generales en tiempo real">
+    <section
+      class="stats-grid"
+      aria-labelledby="stats-title">
+
+      <h2 id="stats-title" class="sr-only">
+        Estadísticas generales
+      </h2>
+
       <article class="stat-card" aria-label="Ternas activas">
         <span class="stat-number">{{ totalTeams() }}</span>
         <span class="stat-label">Ternas activas</span>
       </article>
+
       <article class="stat-card" aria-label="Estudiantes registrados">
         <span class="stat-number">{{ totalStudents() }}</span>
         <span class="stat-label">Estudiantes registrados</span>
       </article>
+
       <article class="stat-card blue" aria-label="Evaluadores registrados">
         <span class="stat-number">{{ totalEvaluators() }}</span>
         <span class="stat-label">Evaluadores registrados</span>
       </article>
+
       <article class="stat-card green" aria-label="Evaluaciones completadas">
         <span class="stat-number">{{ totalResults() }}</span>
         <span class="stat-label">Evaluaciones completadas</span>
       </article>
+
       <article class="stat-card orange" aria-label="Evaluaciones pendientes">
         <span class="stat-number">{{ pendingTeams() }}</span>
         <span class="stat-label">Evaluaciones pendientes</span>
@@ -32,6 +48,7 @@
 
     <section class="section" aria-labelledby="recent-title">
       <h2 id="recent-title">Actividad reciente</h2>
+
       @if (recentTeams().length > 0) {
         <table class="tabla" aria-label="Actividad reciente de ternas">
           <thead>
@@ -49,7 +66,9 @@
                 <td>{{ team.date }}</td>
                 <td>{{ team.studentIds.length }}</td>
                 <td>
-                  <span class="badge" [class.badge-ok]="team.status === 'completed'"
+                  <span
+                    class="badge"
+                    [class.badge-ok]="team.status === 'completed'"
                     [class.badge-pending]="team.status === 'pending'">
                     {{ team.status === 'completed' ? 'Completada' : 'En progreso' }}
                   </span>
