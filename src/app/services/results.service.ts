@@ -1,87 +1,83 @@
-import { Injectable, inject, OnDestroy } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import {
-  Firestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  Unsubscribe
-} from '@angular/fire/firestore';
 
 /** Modelo de datos de un resultado de evaluación */
 export interface Result {
   id?: string;
-  /** ID de la terna a la que pertenece este resultado */
   teamId: string;
-  /** Nombre de la terna (desnormalizado para consultas rápidas) */
   teamName: string;
-  /** ID del estudiante evaluado */
   studentId: string;
-  /** Calificación obtenida */
   score: number;
-  /** Fecha de creación del resultado */
   createdAt?: string;
 }
 
-/**
- * Servicio de resultados — conexión en tiempo real con la colección
- * 'resultados' de Firebase Firestore.
- *
- * Usa onSnapshot para mantener los datos sincronizados automáticamente.
- */
-@Injectable({ providedIn: 'root' })
-export class ResultsService implements OnDestroy {
-  private readonly firestore = inject(Firestore);
+@Injectable({
+  providedIn: 'root'
+})
+export class ResultsService {
 
-  /** Referencia a la colección 'resultados' en Firestore */
-  private readonly collectionRef = collection(this.firestore, 'resultados');
+  private readonly storageKey = 'setu_results';
 
-  /** Subject interno que emite la lista actualizada de resultados */
-  private readonly resultsSubject = new BehaviorSubject<Result[]>([]);
+  private readonly resultsSubject = new BehaviorSubject<Result[]>(
+    this.loadResults()
+  );
 
-  /** Función para cancelar la suscripción a onSnapshot */
-  private unsubscribe: Unsubscribe;
-
-  constructor() {
-    // Escucha cambios en tiempo real de la colección 'resultados'
-    const q = query(this.collectionRef, orderBy('createdAt'));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      const results: Result[] = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as Result));
-      this.resultsSubject.next(results);
-    });
-  }
-
-  ngOnDestroy(): void {
-    // Cancela la suscripción a Firestore al destruir el servicio
-    this.unsubscribe();
-  }
-
-  /** Devuelve un observable con la lista de resultados en tiempo real */
+  /** Lista de resultados */
   list(): Observable<Result[]> {
     return this.resultsSubject.asObservable();
   }
 
-  /**
-   * Crea resultados para todos los estudiantes de una terna.
-   * Cada estudiante recibe un registro con calificación inicial de 0.
-   */
+  /** Crear resultados iniciales para estudiantes de una terna */
   async createForTeam(teamId: string, teamName: string, studentIds: string[]): Promise<void> {
     const now = new Date().toISOString();
-    // Guardar cada resultado como un documento en la colección 'resultados'
-    const promises = studentIds.map(studentId =>
-      addDoc(this.collectionRef, {
-        teamId,
-        teamName,
-        studentId,
-        score: 0,
-        createdAt: now
-      })
+
+    const currentResults = this.resultsSubject.value;
+
+    const newResults: Result[] = studentIds.map(studentId => ({
+      id: crypto.randomUUID(),
+      teamId,
+      teamName,
+      studentId,
+      score: 0,
+      createdAt: now
+    }));
+
+    this.saveResults([...currentResults, ...newResults]);
+  }
+
+  /** Actualizar nota de un estudiante */
+  async updateScore(resultId: string, score: number): Promise<void> {
+    const updatedResults = this.resultsSubject.value.map(result =>
+      result.id === resultId
+        ? { ...result, score }
+        : result
     );
-    await Promise.all(promises);
+
+    this.saveResults(updatedResults);
+  }
+
+  /** Cargar resultados desde localStorage */
+  private loadResults(): Result[] {
+    const data = localStorage.getItem(this.storageKey);
+
+    if (!data) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(data) as Result[];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Guardar resultados en localStorage */
+  private saveResults(results: Result[]): void {
+    localStorage.setItem(
+      this.storageKey,
+      JSON.stringify(results)
+    );
+
+    this.resultsSubject.next(results);
   }
 }

@@ -40,15 +40,11 @@
               type="text"
               formControlName="name"
               placeholder="Nombre de la terna"
-              appTippy="Nombre descriptivo de la terna (mínimo 3 caracteres)" />
+              appTippy="Nombre descriptivo de la terna" />
 
             @if (form.controls.name.touched && form.controls.name.invalid) {
               <span class="field-error" role="alert">
-                @if (form.controls.name.errors?.['required']) {
-                  El nombre de la terna es obligatorio.
-                } @else if (form.controls.name.errors?.['minlength']) {
-                  El nombre debe tener al menos 3 caracteres.
-                }
+                El nombre de la terna es obligatorio.
               </span>
             }
           </label>
@@ -67,65 +63,97 @@
             }
           </label>
 
-          <label class="field">
-            Estudiantes
+          <div class="field autocomplete-box">
+            <label for="studentSearch">Estudiantes</label>
 
-            <select
-              multiple
-              formControlName="studentIds"
-              size="4"
-              appTippy="Selecciona al menos un estudiante (mantén Ctrl para seleccionar varios)"
-              aria-label="Seleccionar estudiantes">
+            <input
+              id="studentSearch"
+              type="text"
+              placeholder="Buscar estudiante..."
+              [value]="studentSearch()"
+              (input)="setStudentSearch($any($event.target).value)"
+              appTippy="Escribe para buscar estudiantes guardados" />
 
-              @for (student of students(); track student.id ?? student.email) {
-                <option [value]="student.id">
-                  {{ student.name }} ({{ student.program }})
-                </option>
+            @if (filteredStudents().length > 0) {
+              <ul class="suggestions">
+                @for (student of filteredStudents(); track student.id ?? student.email) {
+                  <li>
+                    <button
+                      type="button"
+                      (click)="addStudent(student.id)">
+                      {{ student.name }} ({{ student.program }})
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+
+            <div class="chips">
+              @for (student of selectedStudents(); track student.id ?? student.email) {
+                <span class="chip">
+                  {{ student.name }}
+                  <button
+                    type="button"
+                    (click)="removeStudent(student.id)"
+                    aria-label="Quitar estudiante">
+                    ×
+                  </button>
+                </span>
               }
-            </select>
+            </div>
 
             @if (form.controls.studentIds.touched && form.controls.studentIds.invalid) {
               <span class="field-error" role="alert">
                 Selecciona al menos un estudiante.
               </span>
             }
+          </div>
 
-            @if (students().length === 0) {
-              <span class="field-warning">
-                No hay estudiantes registrados. Regístralos primero.
-              </span>
+          <div class="field autocomplete-box">
+            <label for="evaluatorSearch">Evaluadores</label>
+
+            <input
+              id="evaluatorSearch"
+              type="text"
+              placeholder="Buscar evaluador..."
+              [value]="evaluatorSearch()"
+              (input)="setEvaluatorSearch($any($event.target).value)"
+              appTippy="Escribe para buscar evaluadores guardados" />
+
+            @if (filteredEvaluators().length > 0) {
+              <ul class="suggestions">
+                @for (evaluator of filteredEvaluators(); track evaluator.id ?? evaluator.email) {
+                  <li>
+                    <button
+                      type="button"
+                      (click)="addEvaluator(evaluator.id)">
+                      {{ evaluator.name }} ({{ evaluator.specialty }})
+                    </button>
+                  </li>
+                }
+              </ul>
             }
-          </label>
 
-          <label class="field">
-            Evaluadores
-
-            <select
-              multiple
-              formControlName="evaluatorIds"
-              size="4"
-              appTippy="Selecciona al menos dos evaluadores (mantén Ctrl para seleccionar varios)"
-              aria-label="Seleccionar evaluadores">
-
-              @for (evaluator of evaluators(); track evaluator.id ?? evaluator.email) {
-                <option [value]="evaluator.id">
-                  {{ evaluator.name }} ({{ evaluator.specialty }})
-                </option>
+            <div class="chips">
+              @for (evaluator of selectedEvaluators(); track evaluator.id ?? evaluator.email) {
+                <span class="chip">
+                  {{ evaluator.name }}
+                  <button
+                    type="button"
+                    (click)="removeEvaluator(evaluator.id)"
+                    aria-label="Quitar evaluador">
+                    ×
+                  </button>
+                </span>
               }
-            </select>
+            </div>
 
             @if (form.controls.evaluatorIds.touched && form.controls.evaluatorIds.invalid) {
               <span class="field-error" role="alert">
                 Selecciona al menos dos evaluadores.
               </span>
             }
-
-            @if (evaluators().length === 0) {
-              <span class="field-warning">
-                No hay evaluadores registrados. Regístralos primero.
-              </span>
-            }
-          </label>
+          </div>
 
           <label class="field">
             Estado
@@ -133,13 +161,10 @@
             <select
               formControlName="status"
               appTippy="Define el estado de la terna">
-
               <option value="pending">En progreso</option>
               <option value="completed">Completada</option>
-
             </select>
           </label>
-
         </fieldset>
 
         <footer class="form-actions">
@@ -147,14 +172,13 @@
             class="btn-primary"
             type="submit"
             [disabled]="saving()"
-            [appTippy]="form.invalid ? submitHint() : (isEditing() ? 'Guardar cambios en Firestore' : 'Crear terna en Firestore')">
+            [appTippy]="form.invalid ? submitHint() : (isEditing() ? 'Guardar cambios' : 'Crear terna')">
 
             @if (saving()) {
               Guardando...
             } @else {
               {{ isEditing() ? 'Actualizar terna' : 'Crear terna' }}
             }
-
           </button>
 
           @if (isEditing()) {
@@ -172,7 +196,6 @@
             {{ submitHint() }}
           </p>
         }
-
       </form>
 
       <table class="tabla" aria-label="Lista de ternas">
@@ -199,9 +222,7 @@
                   class="badge"
                   [class.badge-ok]="team.status === 'completed'"
                   [class.badge-pending]="team.status === 'pending'">
-
                   {{ team.status === 'completed' ? 'Completada' : 'En progreso' }}
-
                 </span>
               </td>
 
@@ -211,7 +232,6 @@
                     type="button"
                     class="link-button"
                     (click)="editTeam(team)"
-                    [attr.aria-label]="'Editar ' + team.name"
                     appTippy="Editar terna">
                     Editar
                   </button>
@@ -220,7 +240,6 @@
                     type="button"
                     class="link-button danger"
                     (click)="removeTeam(team.id)"
-                    [attr.aria-label]="'Eliminar ' + team.name"
                     appTippy="Eliminar terna">
                     Eliminar
                   </button>
@@ -236,7 +255,6 @@
           No hay ternas registradas.
         </p>
       }
-
     </section>
   </main>
-</div>
+</div>x

@@ -32,6 +32,12 @@ export const routes: Routes = [
       import('./components/evaluadores/evaluadores').then(m => m.EvaluadoresComponent)
   },
   {
+    path: 'evaluacion',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./components/evaluacion/evaluacion').then(m => m.EvaluacionComponent)
+  },
+  {
     path: 'resultados',
     canActivate: [authGuard],
     loadComponent: () =>
