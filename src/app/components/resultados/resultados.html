@@ -15,8 +15,8 @@
       </h2>
 
       <article class="stat-card" aria-label="Promedio general">
-        <span class="stat-number">{{ averageScore() }}%</span>
-        <span class="stat-label">Promedio general</span>
+        <span class="stat-number">{{ averageScore() }}</span>
+        <span class="stat-label">Promedio general /40</span>
       </article>
 
       <article class="stat-card" aria-label="Reportes generados">
@@ -26,7 +26,7 @@
 
       <article class="stat-card green" aria-label="Ternas destacadas">
         <span class="stat-number">{{ highlightedTeams() }}</span>
-        <span class="stat-label">Ternas destacadas</span>
+        <span class="stat-label">Ternas completadas</span>
       </article>
     </section>
 
@@ -75,7 +75,11 @@
           <tr>
             <th scope="col">Terna</th>
             <th scope="col">Estudiante</th>
-            <th scope="col">Calificación</th>
+            <th scope="col">Evaluador 1</th>
+            <th scope="col">Evaluador 2</th>
+            <th scope="col">Evaluador 3</th>
+            <th scope="col">Promedio</th>
+            <th scope="col">Nota final /40</th>
           </tr>
         </thead>
 
@@ -84,6 +88,10 @@
             <tr>
               <td>{{ result.teamName }}</td>
               <td>{{ result.studentName }}</td>
+              <td>{{ result.evaluator1 }}</td>
+              <td>{{ result.evaluator2 }}</td>
+              <td>{{ result.evaluator3 }}</td>
+              <td>{{ result.averageScore }}</td>
               <td>{{ result.score }}</td>
             </tr>
           }

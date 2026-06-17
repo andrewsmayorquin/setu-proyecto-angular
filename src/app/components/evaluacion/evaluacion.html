@@ -1,0 +1,81 @@
+<div class="dashboard">
+  <app-sidebar />
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <h1>Evaluación de terna</h1>
+        <p>Selecciona la terna y el estudiante a evaluar.</p>
+      </div>
+    </header>
+
+    <section class="card">
+      <label>Terna</label>
+      <select #teamSelect (change)="setTeam(teamSelect.value)">
+        <option value="">Selecciona una terna</option>
+        @for (team of teams(); track team.id) {
+          <option [value]="team.id">{{ team.name }}</option>
+        }
+      </select>
+
+      <label>Evaluador</label>
+
+      @if (session()?.role === 'evaluador') {
+        <input
+          type="text"
+          [value]="currentEvaluator()?.name || session()?.name"
+          readonly>
+      } @else {
+        <select #evaluatorSelect (change)="setEvaluator(evaluatorSelect.value)">
+          <option value="">Selecciona evaluador</option>
+          @for (evaluator of evaluators(); track evaluator.id) {
+            <option [value]="evaluator.id">{{ evaluator.name }}</option>
+          }
+        </select>
+      }
+
+      <label>Estudiante</label>
+      <select #studentSelect (change)="setStudent(studentSelect.value)">
+        <option value="">Selecciona estudiante</option>
+        @for (student of students(); track student.id) {
+          <option [value]="student.id">{{ student.name }}</option>
+        }
+      </select>
+    </section>
+
+    <section class="card">
+      <h2>Criterios de evaluación</h2>
+
+      <form [formGroup]="form" (ngSubmit)="saveEvaluation()">
+        <div class="criteria-row">
+          <span>Dominio del tema</span>
+          <input type="number" min="1" max="5" formControlName="criterio1">
+        </div>
+
+        <div class="criteria-row">
+          <span>Presentación</span>
+          <input type="number" min="1" max="5" formControlName="criterio2">
+        </div>
+
+        <div class="criteria-row">
+          <span>Uso de recursos</span>
+          <input type="number" min="1" max="5" formControlName="criterio3">
+        </div>
+
+        <div class="criteria-row">
+          <span>Respuesta a preguntas</span>
+          <input type="number" min="1" max="5" formControlName="criterio4">
+        </div>
+
+        <div class="criteria-row">
+          <span>Conclusiones</span>
+          <input type="number" min="1" max="5" formControlName="criterio5">
+        </div>
+
+        <button type="submit">
+          Guardar evaluación
+        </button>
+      </form>
+    </section>
+  </main>
+</div>

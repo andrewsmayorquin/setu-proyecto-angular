@@ -29,14 +29,26 @@ export class LoginComponent {
     }
 
     const { username, password } = this.form.getRawValue();
-    const ok = this.auth.login(username.trim(), password.trim());
+
+    const ok = this.auth.login(
+      username.trim(),
+      password.trim()
+    );
 
     if (ok) {
       this.errorMessage.set('');
-      this.router.navigate(['/home']);
+
+      const role = this.auth.getRole();
+
+      if (role === 'evaluador') {
+        this.router.navigate(['/evaluacion']);
+      } else {
+        this.router.navigate(['/home']);
+      }
+
       return;
     }
 
-    this.errorMessage.set('Credenciales invalidas. Usa admin / admin.');
+    this.errorMessage.set('Credenciales inválidas. Verifica tu usuario y contraseña.');
   }
 }

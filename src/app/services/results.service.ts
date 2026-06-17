@@ -1,24 +1,22 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import {
   Firestore,
   collection,
   addDoc,
-  getDocs
+  onSnapshot,
+  query,
+  orderBy,
+  Unsubscribe
 } from '@angular/fire/firestore';
 
 /** Modelo de datos de un resultado de evaluación */
 export interface Result {
   id?: string;
-  /** ID de la terna a la que pertenece este resultado */
   teamId: string;
-  /** Nombre de la terna (desnormalizado para consultas rápidas) */
   teamName: string;
-  /** ID del estudiante evaluado */
   studentId: string;
-  /** Calificación obtenida */
   score: number;
-  /** Fecha de creación del resultado */
   createdAt?: string;
 }
 
@@ -29,7 +27,7 @@ export interface Result {
  * Usa onSnapshot para mantener los datos sincronizados automáticamente.
  */
 @Injectable({ providedIn: 'root' })
-export class ResultsService {
+export class ResultsService implements OnDestroy {
   private readonly firestore = inject(Firestore);
 
   /** Referencia a la colección 'resultados' en Firestore */
@@ -38,44 +36,44 @@ export class ResultsService {
   /** Subject interno que emite la lista actualizada de resultados */
   private readonly resultsSubject = new BehaviorSubject<Result[]>([]);
 
+  /** Función para cancelar la suscripción a onSnapshot */
+  private unsubscribe: Unsubscribe;
+
   constructor() {
-    this.loadResults();
+    // Escucha cambios en tiempo real de la colección 'resultados'
+    const q = query(this.collectionRef, orderBy('createdAt'));
+    this.unsubscribe = onSnapshot(q, (snapshot) => {
+      const results: Result[] = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      } as Result));
+      this.resultsSubject.next(results);
+    });
   }
 
-  private loadResults(): void {
-    const stored = localStorage.getItem('results');
-    if (stored) {
-      this.resultsSubject.next(JSON.parse(stored));
-    }
+  ngOnDestroy(): void {
+    // Cancela la suscripción a Firestore al destruir el servicio
+    this.unsubscribe();
   }
 
-  /** Devuelve un observable con la lista de resultados en tiempo real */
+  /** Lista de resultados */
   list(): Observable<Result[]> {
     return this.resultsSubject.asObservable();
   }
 
-  /**
-   * Crea resultados para todos los estudiantes de una terna.
-   * Cada estudiante recibe un registro con calificación inicial de 0.
-   */
+  /** Crear resultados iniciales para estudiantes de una terna */
   async createForTeam(teamId: string, teamName: string, studentIds: string[]): Promise<void> {
     const now = new Date().toISOString();
-    const newResults = studentIds.map(studentId => ({
-      id: Date.now().toString() + Math.random(),
-      teamId,
-      teamName,
-      studentId,
-      score: 0,
-      createdAt: now
-    }));
-    const current = this.resultsSubject.value;
-    this.resultsSubject.next([...current, ...newResults]);
-    localStorage.setItem('results', JSON.stringify(this.resultsSubject.value));
-    try {
-      const promises = newResults.map(result => addDoc(this.collectionRef, result));
-      await Promise.all(promises);
-    } catch (error) {
-      console.warn('Error creating in Firestore, data saved locally');
-    }
+    // Guardar cada resultado como un documento en la colección 'resultados'
+    const promises = studentIds.map(studentId =>
+      addDoc(this.collectionRef, {
+        teamId,
+        teamName,
+        studentId,
+        score: 0,
+        createdAt: now
+      })
+    );
+    await Promise.all(promises);
   }
 }

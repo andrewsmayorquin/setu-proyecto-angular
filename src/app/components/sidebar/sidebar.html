@@ -4,57 +4,72 @@
   </header>
 
   @if (isAuthenticated()) {
+
     <nav class="sidebar-nav" aria-label="Navegación principal">
+
       <a
         class="nav-item"
         routerLink="/home"
         routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-        aria-label="Panel de control">
+        [routerLinkActiveOptions]="{ exact: true }">
         Panel de control
       </a>
 
-      <a
-        class="nav-item"
-        routerLink="/ternas"
-        routerLinkActive="active"
-        aria-label="Gestión de ternas">
-        Ternas
-      </a>
+      @if (isAdmin()) {
+
+        <a
+          class="nav-item"
+          routerLink="/ternas"
+          routerLinkActive="active">
+          Ternas
+        </a>
+
+        <a
+          class="nav-item"
+          routerLink="/estudiantes"
+          routerLinkActive="active">
+          Estudiantes
+        </a>
+
+        <a
+          class="nav-item"
+          routerLink="/evaluadores"
+          routerLinkActive="active">
+          Evaluadores
+        </a>
+
+        <a
+          class="nav-item"
+          routerLink="/resultados"
+          routerLinkActive="active">
+          Resultados
+        </a>
+
+      }
 
       <a
         class="nav-item"
-        routerLink="/estudiantes"
-        routerLinkActive="active"
-        aria-label="Gestión de estudiantes">
-        Estudiantes
+        routerLink="/evaluacion"
+        routerLinkActive="active">
+        Evaluación
       </a>
 
-      <a
-        class="nav-item"
-        routerLink="/evaluadores"
-        routerLinkActive="active"
-        aria-label="Gestión de evaluadores">
-        Evaluadores
-      </a>
-
-      <a
-        class="nav-item"
-        routerLink="/resultados"
-        routerLinkActive="active"
-        aria-label="Ver resultados">
-        Resultados
-      </a>
     </nav>
 
     <footer class="sidebar-footer">
-      <p>Admin</p>
+
+      <p>
+        {{ session()?.name }}
+      </p>
+
       <button
         type="button"
-        (click)="logout()"
-        aria-label="Cerrar sesión">
+        (click)="logout()">
         Salir
       </button>
+
     </footer>
+
   }
+
 </aside>

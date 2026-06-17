@@ -9,8 +9,7 @@ import { SidebarComponent } from '../sidebar/sidebar';
 /**
  * Componente de gestión de evaluadores.
  * Permite crear, editar, eliminar y buscar evaluadores.
- * Los datos se persisten en la colección 'evaluadores' de Firestore
- * y se actualizan en tiempo real mediante onSnapshot.
+ * También permite crear las credenciales de acceso para cada evaluador.
  */
 @Component({
   selector: 'app-evaluadores',
@@ -29,14 +28,17 @@ export class EvaluadoresComponent {
 
   readonly evaluators = computed(() => {
     const term = this.search().trim().toLowerCase();
+
     return this.evaluatorsSignal().filter(evaluator => {
       if (!term) {
         return true;
       }
+
       return (
         evaluator.name.toLowerCase().includes(term) ||
         evaluator.email.toLowerCase().includes(term) ||
         evaluator.specialty.toLowerCase().includes(term) ||
+        evaluator.username.toLowerCase().includes(term) ||
         (evaluator.id ?? '').toLowerCase().includes(term)
       );
     });
@@ -49,33 +51,45 @@ export class EvaluadoresComponent {
     name: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.required, Validators.email]],
     specialty: ['', [Validators.required, Validators.minLength(2)]],
+    username: ['', [Validators.required, Validators.minLength(3)]],
+    password: ['', [Validators.required, Validators.minLength(4)]],
     active: [true]
   });
 
   async saveEvaluator(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.toastr.warning('Complete correctamente todos los campos');
       return;
     }
 
     const value = this.form.getRawValue();
+
     const payload: Evaluator = {
       name: value.name.trim(),
       email: value.email.trim(),
       specialty: value.specialty.trim(),
+      username: value.username.trim(),
+      password: value.password.trim(),
+      role: 'evaluador',
       active: value.active
     };
 
     const editingId = this.editingId();
-    if (editingId) {
-      await this.evaluatorsService.update(editingId, payload);
-      this.toastr.success('Registro actualizado exitosamente');
-    } else {
-      await this.evaluatorsService.create(payload);
-      this.toastr.success('Registro creado exitosamente');
-    }
 
-    this.resetForm();
+    try {
+      if (editingId) {
+        await this.evaluatorsService.update(editingId, payload);
+        this.toastr.success('Evaluador actualizado exitosamente');
+      } else {
+        await this.evaluatorsService.create(payload);
+        this.toastr.success('Evaluador creado exitosamente');
+      }
+
+      this.resetForm();
+    } catch (error: any) {
+      this.toastr.error(error.message || 'Error al guardar el evaluador');
+    }
   }
 
   editEvaluator(evaluator: Evaluator): void {
@@ -84,27 +98,34 @@ export class EvaluadoresComponent {
     }
 
     this.editingId.set(evaluator.id);
+
     this.form.patchValue({
       name: evaluator.name,
       email: evaluator.email,
       specialty: evaluator.specialty,
+      username: evaluator.username,
+      password: evaluator.password,
       active: evaluator.active
     });
   }
 
   async removeEvaluator(id: string): Promise<void> {
     const confirmed = window.confirm('¿Seguro que deseas eliminar este evaluador?');
+
     if (!confirmed) {
       return;
     }
 
     try {
       await this.evaluatorsService.remove(id);
+
       if (this.editingId() === id) {
         this.resetForm();
       }
+
+      this.toastr.success('Evaluador eliminado exitosamente');
     } catch (error: any) {
-      alert(error.message || 'Error al eliminar el evaluador');
+      this.toastr.error(error.message || 'Error al eliminar el evaluador');
     }
   }
 
@@ -118,10 +139,13 @@ export class EvaluadoresComponent {
 
   private resetForm(): void {
     this.editingId.set(null);
+
     this.form.reset({
       name: '',
       email: '',
       specialty: '',
+      username: '',
+      password: '',
       active: true
     });
   }

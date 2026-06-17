@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import {
   Firestore,
@@ -7,18 +7,35 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  getDocs
+  getDocs,
+  onSnapshot,
+  query,
+  orderBy,
+  Unsubscribe
 } from '@angular/fire/firestore';
 
 /** Modelo de datos de un evaluador del sistema */
 export interface Evaluator {
   id?: string;
+
   /** Nombre completo del evaluador */
   name: string;
+
   /** Correo electrónico del evaluador */
   email: string;
-  /** Área de especialidad (ej: Sistemas, Administración) */
+
+  /** Área de especialidad */
   specialty: string;
+
+  /** Usuario para iniciar sesión */
+  username: string;
+
+  /** Contraseña para iniciar sesión */
+  password: string;
+
+  /** Rol del usuario */
+  role: 'evaluador';
+
   /** Indica si el evaluador está activo */
   active: boolean;
 }
@@ -30,7 +47,7 @@ export interface Evaluator {
  * Usa onSnapshot para mantener los datos sincronizados automáticamente.
  */
 @Injectable({ providedIn: 'root' })
-export class EvaluatorsService {
+export class EvaluatorsService implements OnDestroy {
   private readonly firestore = inject(Firestore);
 
   /** Referencia a la colección 'evaluadores' en Firestore */
@@ -39,67 +56,66 @@ export class EvaluatorsService {
   /** Subject interno que emite la lista actualizada de evaluadores */
   private readonly evaluatorsSubject = new BehaviorSubject<Evaluator[]>([]);
 
+  /** Función para cancelar la suscripción a onSnapshot */
+  private unsubscribe: Unsubscribe;
+
   constructor() {
-    this.loadEvaluators();
+    // Escucha cambios en tiempo real de la colección 'evaluadores'
+    const q = query(this.collectionRef, orderBy('name'));
+    this.unsubscribe = onSnapshot(q, (snapshot) => {
+      const evaluators: Evaluator[] = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      } as Evaluator));
+      this.evaluatorsSubject.next(evaluators);
+    });
   }
 
-  private loadEvaluators(): void {
-    const stored = localStorage.getItem('evaluators');
-    if (stored) {
-      this.evaluatorsSubject.next(JSON.parse(stored));
-    }
+  ngOnDestroy(): void {
+    // Cancela la suscripción a Firestore al destruir el servicio
+    this.unsubscribe();
   }
 
-  /** Busca un evaluador por su ID en la lista actual */
+  /** Busca un evaluador por su ID */
   getById(id: string): Evaluator | undefined {
-    return this.evaluatorsSubject.value.find(e => e.id === id);
+    return this.evaluatorsSubject.value.find(
+      evaluator => evaluator.id === id
+    );
   }
 
-  /** Devuelve un observable con la lista de evaluadores en tiempo real */
+  /** Lista de evaluadores */
   list(): Observable<Evaluator[]> {
     return this.evaluatorsSubject.asObservable();
   }
 
-  /** Crea un nuevo evaluador en la colección 'evaluadores' de Firestore */
+  /** Crear evaluador */
   async create(evaluator: Evaluator): Promise<void> {
     const { id, ...data } = evaluator;
-    const newEvaluator = { id: Date.now().toString(), ...data };
-    const current = this.evaluatorsSubject.value;
-    this.evaluatorsSubject.next([...current, newEvaluator]);
-    localStorage.setItem('evaluators', JSON.stringify(this.evaluatorsSubject.value));
-    try {
-      await addDoc(this.collectionRef, data);
-    } catch (error) {
-      console.warn('Error creating in Firestore, data saved locally');
-    }
+    await addDoc(this.collectionRef, data);
   }
 
   /** Actualiza los datos de un evaluador existente en Firestore */
   async update(id: string, evaluator: Partial<Evaluator>): Promise<void> {
-    const current = this.evaluatorsSubject.value;
-    const updated = current.map(e => e.id === id ? { ...e, ...evaluator } : e);
-    this.evaluatorsSubject.next(updated);
-    localStorage.setItem('evaluators', JSON.stringify(updated));
-    try {
-      const ref = doc(this.firestore, 'evaluadores', id);
-      const { id: _, ...data } = evaluator;
-      await updateDoc(ref, data);
-    } catch (error) {
-      console.warn('Error updating in Firestore, data saved locally');
-    }
+    const ref = doc(this.firestore, 'evaluadores', id);
+    const { id: _, ...data } = evaluator;
+    await updateDoc(ref, data);
   }
 
   /** Elimina un evaluador de Firestore si no está asignado a ninguna terna */
   async remove(id: string): Promise<void> {
-    const current = this.evaluatorsSubject.value;
-    const filtered = current.filter(e => e.id !== id);
-    this.evaluatorsSubject.next(filtered);
-    localStorage.setItem('evaluators', JSON.stringify(filtered));
-    try {
-      const ref = doc(this.firestore, 'evaluadores', id);
-      await deleteDoc(ref);
-    } catch (error) {
-      console.warn('Error deleting in Firestore, data removed locally');
+    // Verificar si el evaluador está referenciado en alguna terna
+    const teamsCol = collection(this.firestore, 'ternas');
+    const snap = await getDocs(teamsCol);
+    const isReferenced = snap.docs.some(d => {
+      const data = d.data() as { evaluatorIds?: string[] };
+      return data.evaluatorIds?.includes(id);
+    });
+
+    if (isReferenced) {
+      throw new Error('No se puede eliminar: el evaluador está asignado a una o más ternas');
     }
+
+    const ref = doc(this.firestore, 'evaluadores', id);
+    await deleteDoc(ref);
   }
 }
