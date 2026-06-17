@@ -1,5 +1,18 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import {
+  Firestore,
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  orderBy,
+  Unsubscribe
+} from '@angular/fire/firestore';
 
 /** Modelo de datos de un estudiante registrado en el sistema */
 export interface Student {
@@ -12,91 +25,80 @@ export interface Student {
   program: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
-export class StudentsService {
+/**
+ * Servicio de estudiantes — conexión en tiempo real con la colección
+ * 'estudiantes' de Firebase Firestore.
+ *
+ * Usa onSnapshot para mantener los datos sincronizados automáticamente.
+ */
+@Injectable({ providedIn: 'root' })
+export class StudentsService implements OnDestroy {
+  private readonly firestore = inject(Firestore);
 
-  private readonly storageKey = 'setu_students';
+  /** Referencia a la colección 'estudiantes' en Firestore */
+  private readonly collectionRef = collection(this.firestore, 'estudiantes');
 
-  private readonly studentsSubject = new BehaviorSubject<Student[]>(
-    this.loadStudents()
-  );
+  /** Subject interno que emite la lista actualizada de estudiantes */
+  private readonly studentsSubject = new BehaviorSubject<Student[]>([]);
 
-  constructor() {}
+  /** Función para cancelar la suscripción a onSnapshot */
+  private unsubscribe: Unsubscribe;
 
-  /** Obtiene un estudiante por ID */
-  getById(id: string): Student | undefined {
-    return this.studentsSubject.value.find(student => student.id === id);
+  constructor() {
+    // Escucha cambios en tiempo real de la colección 'estudiantes'
+    const q = query(this.collectionRef, orderBy('name'));
+    this.unsubscribe = onSnapshot(q, (snapshot) => {
+      const students: Student[] = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      } as Student));
+      this.studentsSubject.next(students);
+    });
   }
 
-  /** Lista de estudiantes */
+  ngOnDestroy(): void {
+    // Cancela la suscripción a Firestore al destruir el servicio
+    this.unsubscribe();
+  }
+
+  /** Busca un estudiante por su ID en la lista actual */
+  getById(id: string): Student | undefined {
+    return this.studentsSubject.value.find(s => s.id === id);
+  }
+
+  /** Devuelve un observable con la lista de estudiantes en tiempo real */
   list(): Observable<Student[]> {
     return this.studentsSubject.asObservable();
   }
 
-  /** Crear estudiante */
+  /** Crea un nuevo estudiante en la colección 'estudiantes' de Firestore */
   async create(student: Student): Promise<void> {
-    const students = this.studentsSubject.value;
-
-    const newStudent: Student = {
-      ...student,
-      id: crypto.randomUUID()
-    };
-
-    const updatedStudents = [...students, newStudent];
-
-    this.saveStudents(updatedStudents);
+    const { id, ...data } = student;
+    await addDoc(this.collectionRef, data);
   }
 
-  /** Actualizar estudiante */
+  /** Actualiza los datos de un estudiante existente en Firestore */
   async update(id: string, student: Partial<Student>): Promise<void> {
-    const students = this.studentsSubject.value;
-
-    const updatedStudents = students.map(item =>
-      item.id === id
-        ? {
-            ...item,
-            ...student,
-            id
-          }
-        : item
-    );
-
-    this.saveStudents(updatedStudents);
+    const ref = doc(this.firestore, 'estudiantes', id);
+    const { id: _, ...data } = student;
+    await updateDoc(ref, data);
   }
 
-  /** Eliminar estudiante */
+  /** Elimina un estudiante de Firestore si no está asignado a ninguna terna */
   async remove(id: string): Promise<void> {
-    const updatedStudents = this.studentsSubject.value.filter(
-      student => student.id !== id
-    );
+    // Verificar si el estudiante está referenciado en alguna terna
+    const teamsCol = collection(this.firestore, 'ternas');
+    const snap = await getDocs(teamsCol);
+    const isReferenced = snap.docs.some(d => {
+      const data = d.data() as { studentIds?: string[] };
+      return data.studentIds?.includes(id);
+    });
 
-    this.saveStudents(updatedStudents);
-  }
-
-  /** Cargar estudiantes desde localStorage */
-  private loadStudents(): Student[] {
-    const data = localStorage.getItem(this.storageKey);
-
-    if (!data) {
-      return [];
+    if (isReferenced) {
+      throw new Error('No se puede eliminar: el estudiante está asignado a una o más ternas');
     }
 
-    try {
-      return JSON.parse(data) as Student[];
-    } catch {
-      return [];
-    }
-  }
-
-  /** Guardar estudiantes en localStorage */
-  private saveStudents(students: Student[]): void {
-    localStorage.setItem(
-      this.storageKey,
-      JSON.stringify(students)
-    );
-
-    this.studentsSubject.next(students);
+    const ref = doc(this.firestore, 'estudiantes', id);
+    await deleteDoc(ref);
   }
 }
