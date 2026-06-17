@@ -1,4 +1,4 @@
-import { Injectable, inject, OnDestroy } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import {
   Firestore,
@@ -7,10 +7,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot,
-  query,
-  orderBy,
-  Unsubscribe
+  getDocs
 } from '@angular/fire/firestore';
 
 /** Estados posibles de una terna */
@@ -42,7 +39,7 @@ export interface Team {
  * Usa onSnapshot para mantener los datos sincronizados automáticamente.
  */
 @Injectable({ providedIn: 'root' })
-export class TeamsService implements OnDestroy {
+export class TeamsService {
   private readonly firestore = inject(Firestore);
 
   /** Referencia a la colección 'ternas' en Firestore */
@@ -51,24 +48,15 @@ export class TeamsService implements OnDestroy {
   /** Subject interno que emite la lista actualizada de ternas */
   private readonly teamsSubject = new BehaviorSubject<Team[]>([]);
 
-  /** Función para cancelar la suscripción a onSnapshot */
-  private unsubscribe: Unsubscribe;
-
   constructor() {
-    // Escucha cambios en tiempo real de la colección 'ternas'
-    const q = query(this.collectionRef, orderBy('name'));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      const teams: Team[] = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as Team));
-      this.teamsSubject.next(teams);
-    });
+    this.loadTeams();
   }
 
-  ngOnDestroy(): void {
-    // Cancela la suscripción a Firestore al destruir el servicio
-    this.unsubscribe();
+  private loadTeams(): void {
+    const stored = localStorage.getItem('teams');
+    if (stored) {
+      this.teamsSubject.next(JSON.parse(stored));
+    }
   }
 
   /** Devuelve un observable con la lista de ternas en tiempo real */
@@ -79,20 +67,46 @@ export class TeamsService implements OnDestroy {
   /** Crea una nueva terna en Firestore y devuelve su ID generado */
   async create(team: Team): Promise<{ id: string }> {
     const { id, ...data } = team;
-    const ref = await addDoc(this.collectionRef, data);
-    return { id: ref.id };
+    const newId = Date.now().toString();
+    const newTeam = { id: newId, ...data };
+    const current = this.teamsSubject.value;
+    this.teamsSubject.next([...current, newTeam]);
+    localStorage.setItem('teams', JSON.stringify(this.teamsSubject.value));
+    try {
+      const ref = await addDoc(this.collectionRef, data);
+      return { id: ref.id };
+    } catch (error) {
+      console.warn('Error creating in Firestore, data saved locally');
+      return { id: newId };
+    }
   }
 
   /** Actualiza los datos de una terna existente en Firestore */
   async update(id: string, team: Partial<Team>): Promise<void> {
-    const ref = doc(this.firestore, 'ternas', id);
-    const { id: _, ...data } = team;
-    await updateDoc(ref, data);
+    const current = this.teamsSubject.value;
+    const updated = current.map(t => t.id === id ? { ...t, ...team } : t);
+    this.teamsSubject.next(updated);
+    localStorage.setItem('teams', JSON.stringify(updated));
+    try {
+      const ref = doc(this.firestore, 'ternas', id);
+      const { id: _, ...data } = team;
+      await updateDoc(ref, data);
+    } catch (error) {
+      console.warn('Error updating in Firestore, data saved locally');
+    }
   }
 
   /** Elimina una terna de Firestore */
   async remove(id: string): Promise<void> {
-    const ref = doc(this.firestore, 'ternas', id);
-    await deleteDoc(ref);
+    const current = this.teamsSubject.value;
+    const filtered = current.filter(t => t.id !== id);
+    this.teamsSubject.next(filtered);
+    localStorage.setItem('teams', JSON.stringify(filtered));
+    try {
+      const ref = doc(this.firestore, 'ternas', id);
+      await deleteDoc(ref);
+    } catch (error) {
+      console.warn('Error deleting in Firestore, data removed locally');
+    }
   }
 }

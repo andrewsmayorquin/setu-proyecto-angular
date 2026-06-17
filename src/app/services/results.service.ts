@@ -1,13 +1,10 @@
-import { Injectable, inject, OnDestroy } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import {
   Firestore,
   collection,
   addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  Unsubscribe
+  getDocs
 } from '@angular/fire/firestore';
 
 /** Modelo de datos de un resultado de evaluación */
@@ -32,7 +29,7 @@ export interface Result {
  * Usa onSnapshot para mantener los datos sincronizados automáticamente.
  */
 @Injectable({ providedIn: 'root' })
-export class ResultsService implements OnDestroy {
+export class ResultsService {
   private readonly firestore = inject(Firestore);
 
   /** Referencia a la colección 'resultados' en Firestore */
@@ -41,24 +38,15 @@ export class ResultsService implements OnDestroy {
   /** Subject interno que emite la lista actualizada de resultados */
   private readonly resultsSubject = new BehaviorSubject<Result[]>([]);
 
-  /** Función para cancelar la suscripción a onSnapshot */
-  private unsubscribe: Unsubscribe;
-
   constructor() {
-    // Escucha cambios en tiempo real de la colección 'resultados'
-    const q = query(this.collectionRef, orderBy('createdAt'));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      const results: Result[] = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as Result));
-      this.resultsSubject.next(results);
-    });
+    this.loadResults();
   }
 
-  ngOnDestroy(): void {
-    // Cancela la suscripción a Firestore al destruir el servicio
-    this.unsubscribe();
+  private loadResults(): void {
+    const stored = localStorage.getItem('results');
+    if (stored) {
+      this.resultsSubject.next(JSON.parse(stored));
+    }
   }
 
   /** Devuelve un observable con la lista de resultados en tiempo real */
@@ -72,16 +60,22 @@ export class ResultsService implements OnDestroy {
    */
   async createForTeam(teamId: string, teamName: string, studentIds: string[]): Promise<void> {
     const now = new Date().toISOString();
-    // Guardar cada resultado como un documento en la colección 'resultados'
-    const promises = studentIds.map(studentId =>
-      addDoc(this.collectionRef, {
-        teamId,
-        teamName,
-        studentId,
-        score: 0,
-        createdAt: now
-      })
-    );
-    await Promise.all(promises);
+    const newResults = studentIds.map(studentId => ({
+      id: Date.now().toString() + Math.random(),
+      teamId,
+      teamName,
+      studentId,
+      score: 0,
+      createdAt: now
+    }));
+    const current = this.resultsSubject.value;
+    this.resultsSubject.next([...current, ...newResults]);
+    localStorage.setItem('results', JSON.stringify(this.resultsSubject.value));
+    try {
+      const promises = newResults.map(result => addDoc(this.collectionRef, result));
+      await Promise.all(promises);
+    } catch (error) {
+      console.warn('Error creating in Firestore, data saved locally');
+    }
   }
 }

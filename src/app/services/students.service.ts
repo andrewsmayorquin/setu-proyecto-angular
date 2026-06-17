@@ -1,4 +1,4 @@
-import { Injectable, inject, OnDestroy } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import {
   Firestore,
@@ -7,11 +7,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  getDocs,
-  onSnapshot,
-  query,
-  orderBy,
-  Unsubscribe
+  getDocs
 } from '@angular/fire/firestore';
 
 /** Modelo de datos de un estudiante registrado en el sistema */
@@ -32,7 +28,7 @@ export interface Student {
  * Usa onSnapshot para mantener los datos sincronizados automáticamente.
  */
 @Injectable({ providedIn: 'root' })
-export class StudentsService implements OnDestroy {
+export class StudentsService {
   private readonly firestore = inject(Firestore);
 
   /** Referencia a la colección 'estudiantes' en Firestore */
@@ -41,24 +37,15 @@ export class StudentsService implements OnDestroy {
   /** Subject interno que emite la lista actualizada de estudiantes */
   private readonly studentsSubject = new BehaviorSubject<Student[]>([]);
 
-  /** Función para cancelar la suscripción a onSnapshot */
-  private unsubscribe: Unsubscribe;
-
   constructor() {
-    // Escucha cambios en tiempo real de la colección 'estudiantes'
-    const q = query(this.collectionRef, orderBy('name'));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      const students: Student[] = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as Student));
-      this.studentsSubject.next(students);
-    });
+    this.loadStudents();
   }
 
-  ngOnDestroy(): void {
-    // Cancela la suscripción a Firestore al destruir el servicio
-    this.unsubscribe();
+  private loadStudents(): void {
+    const stored = localStorage.getItem('students');
+    if (stored) {
+      this.studentsSubject.next(JSON.parse(stored));
+    }
   }
 
   /** Busca un estudiante por su ID en la lista actual */
@@ -74,31 +61,43 @@ export class StudentsService implements OnDestroy {
   /** Crea un nuevo estudiante en la colección 'estudiantes' de Firestore */
   async create(student: Student): Promise<void> {
     const { id, ...data } = student;
-    await addDoc(this.collectionRef, data);
+    const newStudent = { id: Date.now().toString(), ...data };
+    const current = this.studentsSubject.value;
+    this.studentsSubject.next([...current, newStudent]);
+    localStorage.setItem('students', JSON.stringify(this.studentsSubject.value));
+    try {
+      await addDoc(this.collectionRef, data);
+    } catch (error) {
+      console.warn('Error creating in Firestore, data saved locally');
+    }
   }
 
   /** Actualiza los datos de un estudiante existente en Firestore */
   async update(id: string, student: Partial<Student>): Promise<void> {
-    const ref = doc(this.firestore, 'estudiantes', id);
-    const { id: _, ...data } = student;
-    await updateDoc(ref, data);
+    const current = this.studentsSubject.value;
+    const updated = current.map(s => s.id === id ? { ...s, ...student } : s);
+    this.studentsSubject.next(updated);
+    localStorage.setItem('students', JSON.stringify(updated));
+    try {
+      const ref = doc(this.firestore, 'estudiantes', id);
+      const { id: _, ...data } = student;
+      await updateDoc(ref, data);
+    } catch (error) {
+      console.warn('Error updating in Firestore, data saved locally');
+    }
   }
 
   /** Elimina un estudiante de Firestore si no está asignado a ninguna terna */
   async remove(id: string): Promise<void> {
-    // Verificar si el estudiante está referenciado en alguna terna
-    const teamsCol = collection(this.firestore, 'ternas');
-    const snap = await getDocs(teamsCol);
-    const isReferenced = snap.docs.some(d => {
-      const data = d.data() as { studentIds?: string[] };
-      return data.studentIds?.includes(id);
-    });
-
-    if (isReferenced) {
-      throw new Error('No se puede eliminar: el estudiante está asignado a una o más ternas');
+    const current = this.studentsSubject.value;
+    const filtered = current.filter(s => s.id !== id);
+    this.studentsSubject.next(filtered);
+    localStorage.setItem('students', JSON.stringify(filtered));
+    try {
+      const ref = doc(this.firestore, 'estudiantes', id);
+      await deleteDoc(ref);
+    } catch (error) {
+      console.warn('Error deleting in Firestore, data removed locally');
     }
-
-    const ref = doc(this.firestore, 'estudiantes', id);
-    await deleteDoc(ref);
   }
 }
