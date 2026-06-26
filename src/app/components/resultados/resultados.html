@@ -1,106 +1,204 @@
 <div class="dashboard">
   <app-sidebar />
 
-  <main class="main-content">
+  <main id="contenido-principal" class="main-content" tabindex="-1" @fadeList>
     <header class="page-header">
       <div>
         <h1>Resultados</h1>
-        <p>Reportes y gráficas de evaluaciones.</p>
+        <p aria-live="polite">Última actualización: {{ lastUpdated() }}</p>
+      </div>
+      <div class="actions" aria-label="Acciones de exportación">
+        <button type="button" class="btn-secondary" (click)="exportPdf()"
+          aria-label="Exportar resultados a PDF">Exportar PDF</button>
+        <button type="button" class="btn-primary" (click)="exportExcel()"
+          aria-label="Exportar resultados a Excel CSV">Exportar Excel</button>
       </div>
     </header>
 
+    <!-- ── Estadísticas ── -->
     <section class="stats-grid" aria-labelledby="stats-title">
-      <h2 id="stats-title" class="sr-only">
-        Estadísticas de resultados
-      </h2>
-
+      <h2 id="stats-title" class="sr-only">Estadísticas generales</h2>
       <article class="stat-card" aria-label="Promedio general">
         <span class="stat-number">{{ averageScore() }}</span>
-        <span class="stat-label">Promedio general /40</span>
+        <span class="stat-label">Promedio general</span>
       </article>
-
-      <article class="stat-card" aria-label="Reportes generados">
+      <article class="stat-card blue" aria-label="Total de evaluaciones">
         <span class="stat-number">{{ reportsCount() }}</span>
-        <span class="stat-label">Reportes generados</span>
+        <span class="stat-label">Evaluaciones</span>
       </article>
-
-      <article class="stat-card green" aria-label="Ternas destacadas">
-        <span class="stat-number">{{ highlightedTeams() }}</span>
-        <span class="stat-label">Ternas completadas</span>
+      <article class="stat-card green" aria-label="Porcentaje completadas">
+        <span class="stat-number">{{ completedPercentage() }}%</span>
+        <span class="stat-label">Completas</span>
       </article>
     </section>
 
-    <section class="chart-card" aria-labelledby="chart-title">
-      <h2 id="chart-title">Comparativo por ciclo</h2>
-
-      @if (cycleStats().length > 0) {
-        <figure>
-          <div
-            class="bars"
-            role="img"
-            aria-label="Gráfica de ternas por año">
-
-            @for (item of cycleStats(); track item.year) {
-              <div
-                class="bar"
-                [style.height.%]="item.height"
-                [attr.aria-label]="item.year + ': ' + item.count + ' ternas'">
-
-                <span>{{ item.year }}</span>
-                <strong>{{ item.count }}</strong>
-
+    <!-- ── Top 3 ── -->
+    <section class="top-card" aria-labelledby="top-title">
+      <h2 id="top-title">Top 3 mejores defensas</h2>
+      <p class="hint">Ranking automático según nota final promedio.</p>
+      @if (topTheses().length > 0) {
+        <ol class="ranking" aria-label="Tres mejores tesis evaluadas">
+          @for (item of topTheses(); track item.studentId; let i = $index) {
+            <li>
+              <span class="rank" aria-hidden="true">{{ i + 1 }}</span>
+              <div>
+                <h3>{{ item.studentName }}</h3>
+                <p>
+                  {{ item.teamName }} &mdash;
+                  <strong>{{ item.finalGrade }}/{{ item.weight }}</strong> &mdash;
+                  {{ item.completionLabel }}
+                </p>
               </div>
-            }
-          </div>
-
-          <figcaption>
-            Comparativo de ternas registradas por ciclo académico.
-          </figcaption>
-        </figure>
-
+            </li>
+          }
+        </ol>
       } @else {
-        <p class="empty-state">
-          Aún no hay datos de ternas para mostrar.
-        </p>
+        <p class="empty-state">Aún no hay evaluaciones completadas.</p>
       }
     </section>
 
-    <section class="table-card" aria-labelledby="results-table-title">
-      <h2 id="results-table-title">
-        Resultados registrados
-      </h2>
-
-      <table class="tabla" aria-label="Resultados de evaluaciones">
-        <thead>
-          <tr>
-            <th scope="col">Terna</th>
-            <th scope="col">Estudiante</th>
-            <th scope="col">Evaluador 1</th>
-            <th scope="col">Evaluador 2</th>
-            <th scope="col">Evaluador 3</th>
-            <th scope="col">Promedio</th>
-            <th scope="col">Nota final /40</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          @for (result of results(); track result.id ?? result.studentId) {
+    <!-- ── Estadísticas por evaluador ── -->
+    @if (evaluatorStats().length > 0) {
+      <section class="table-card" aria-labelledby="eval-stats-title">
+        <h2 id="eval-stats-title">Estadísticas por evaluador</h2>
+        <table class="tabla" aria-label="Estadísticas por evaluador">
+          <thead>
             <tr>
-              <td>{{ result.teamName }}</td>
-              <td>{{ result.studentName }}</td>
-              <td>{{ result.evaluator1 }}</td>
-              <td>{{ result.evaluator2 }}</td>
-              <td>{{ result.evaluator3 }}</td>
-              <td>{{ result.averageScore }}</td>
-              <td>{{ result.score }}</td>
+              <th scope="col">Evaluador</th>
+              <th scope="col">Evaluaciones</th>
+              <th scope="col">Promedio /100</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (ev of evaluatorStats(); track ev.name) {
+              <tr>
+                <td>{{ ev.name }}</td>
+                <td>{{ ev.count }}</td>
+                <td><strong>{{ ev.average }}</strong></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
 
-      @if (results().length === 0) {
+    <!-- ── Gráficas ── -->
+    <section class="chart-card chart-layout" aria-labelledby="charts-title">
+      <h2 id="charts-title">Gráficas</h2>
+
+      <article aria-labelledby="cycle-chart-title">
+        <h3 id="cycle-chart-title">Ternas por ciclo</h3>
+        @if (cycleStats().length > 0) {
+          <figure>
+            <div class="bars" role="img"
+              aria-label="Gráfica de barras de ternas por año">
+              @for (item of cycleStats(); track item.year) {
+                <div class="bar"
+                  [style.height.%]="item.height"
+                  [attr.aria-label]="item.year + ': ' + item.count + ' ternas'">
+                  <span>{{ item.year }}</span>
+                  <strong>{{ item.count }}</strong>
+                </div>
+              }
+            </div>
+            <figcaption>Ternas registradas por ciclo académico.</figcaption>
+          </figure>
+        } @else {
+          <p class="empty-state">Sin datos.</p>
+        }
+      </article>
+
+      <article aria-labelledby="score-chart-title">
+        <h3 id="score-chart-title">Distribución de notas</h3>
+        <figure>
+          <div class="bars" role="img"
+            aria-label="Gráfica de distribución de notas">
+            @for (item of scoreDistribution(); track item.label) {
+              <div class="bar accent"
+                [style.height.%]="item.height"
+                [attr.aria-label]="item.label + ': ' + item.count + ' resultados'">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.count }}</strong>
+              </div>
+            }
+          </div>
+          <figcaption>Resultados agrupados por rango de nota final.</figcaption>
+        </figure>
+      </article>
+    </section>
+
+    <!-- ── Tabla de resultados ── -->
+    <section class="table-card" aria-labelledby="results-table-title">
+      <div class="table-header">
+        <div>
+          <h2 id="results-table-title">Resultados por estudiante</h2>
+          <p id="results-table-help" class="hint">
+            Promedio calculado automáticamente entre todos los evaluadores que han completado la evaluación.
+          </p>
+        </div>
+        <div class="filter-bar">
+          <label for="teamFilter" class="sr-only">Filtrar por terna</label>
+          <select id="teamFilter"
+            (change)="setFilterTeam($any($event.target).value)"
+            aria-label="Filtrar resultados por terna">
+            <option value="">Todas las ternas</option>
+            @for (team of teams(); track team.id) {
+              <option [value]="team.id">{{ team.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="pagination" role="navigation" aria-label="Paginación de resultados">
+          <button type="button" class="btn-secondary"
+            (click)="previousPage()"
+            [disabled]="currentPage() === 1"
+            aria-label="Página anterior">Anterior</button>
+          <span aria-live="polite">{{ currentPage() }} / {{ totalPages() }}</span>
+          <button type="button" class="btn-secondary"
+            (click)="nextPage()"
+            [disabled]="currentPage() === totalPages()"
+            aria-label="Página siguiente">Siguiente</button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="tabla" aria-describedby="results-table-help">
+          <caption class="sr-only">
+            Resultados de evaluación: terna, estudiante, puntaje por evaluador y nota final ponderada.
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Terna</th>
+              <th scope="col">Estudiante</th>
+              <th scope="col">Evaluadores (nota)</th>
+              <th scope="col">Prom. /100</th>
+              <th scope="col">Nota final</th>
+              <th scope="col">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (result of paginatedResults(); track result.studentId + result.teamId) {
+              <tr>
+                <td>{{ result.teamName }}</td>
+                <td>{{ result.studentName }}</td>
+                <td>
+                  <ul class="eval-score-list">
+                    @for (es of result.evaluatorScores; track es.name) {
+                      <li>{{ es.name }}: <strong>{{ es.scoreFinal }}/{{ result.weight }}</strong></li>
+                    }
+                  </ul>
+                </td>
+                <td>{{ result.average100 }}</td>
+                <td><strong>{{ result.finalGrade }}/{{ result.weight }}</strong></td>
+                <td>{{ result.completionLabel }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (filteredResults().length === 0) {
         <p class="empty-state">
-          No hay resultados registrados.
+          No hay evaluaciones completadas aún. Los resultados aparecen al guardar evaluaciones.
         </p>
       }
     </section>

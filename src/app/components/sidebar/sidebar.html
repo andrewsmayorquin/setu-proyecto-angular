@@ -1,75 +1,163 @@
-<aside class="sidebar" aria-label="Menú principal">
+<!-- ── Mobile top brand bar (hidden on ≥768px) ───────────────── -->
+<header class="mobile-brand-bar" aria-label="Cabecera SETU">
+  <div class="brand-wrap">
+    <p class="mobile-brand">SETU</p>
+    <p class="mobile-subtitle">Evaluación universitaria</p>
+  </div>
+  @if (isAuthenticated()) {
+    <span class="session-chip" aria-label="Usuario activo: {{ session()?.name }}">
+      {{ session()?.name }}
+    </span>
+  }
+</header>
+
+<!-- ── Desktop sidebar (hidden on <768px) ───────────────────── -->
+<aside
+  id="main-sidebar"
+  class="sidebar"
+  aria-label="Menú principal de SETU">
+
   <header class="sidebar-logo">
-    <h2>SETU</h2>
+    <p class="brand">SETU</p>
+    <p class="brand-subtitle">Evaluación universitaria</p>
   </header>
 
   @if (isAuthenticated()) {
-
     <nav class="sidebar-nav" aria-label="Navegación principal">
-
-      <a
-        class="nav-item"
-        routerLink="/home"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }">
-        Panel de control
-      </a>
+      <a class="nav-item" routerLink="/home" routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        aria-label="Panel de control">Panel de control</a>
 
       @if (isAdmin()) {
-
-        <a
-          class="nav-item"
-          routerLink="/ternas"
-          routerLinkActive="active">
-          Ternas
-        </a>
-
-        <a
-          class="nav-item"
-          routerLink="/estudiantes"
-          routerLinkActive="active">
-          Estudiantes
-        </a>
-
-        <a
-          class="nav-item"
-          routerLink="/evaluadores"
-          routerLinkActive="active">
-          Evaluadores
-        </a>
-
-        <a
-          class="nav-item"
-          routerLink="/resultados"
-          routerLinkActive="active">
-          Resultados
-        </a>
-
+        <a class="nav-item" routerLink="/ternas" routerLinkActive="active"
+          aria-label="Administrar ternas">Ternas</a>
+        <a class="nav-item" routerLink="/estudiantes" routerLinkActive="active"
+          aria-label="Administrar estudiantes">Estudiantes</a>
+        <a class="nav-item" routerLink="/evaluadores" routerLinkActive="active"
+          aria-label="Administrar evaluadores">Evaluadores</a>
+        <a class="nav-item" routerLink="/resultados" routerLinkActive="active"
+          aria-label="Ver resultados">Resultados</a>
       }
 
-      <a
-        class="nav-item"
-        routerLink="/evaluacion"
-        routerLinkActive="active">
-        Evaluación
-      </a>
-
+      <a class="nav-item" routerLink="/evaluacion" routerLinkActive="active"
+        aria-label="Registrar evaluación">Evaluación</a>
     </nav>
 
-    <footer class="sidebar-footer">
-
-      <p>
-        {{ session()?.name }}
-      </p>
-
-      <button
-        type="button"
-        (click)="logout()">
-        Salir
-      </button>
-
+    <footer class="sidebar-footer" aria-label="Sesión actual">
+      <p class="user-name">{{ session()?.name }}</p>
+      <button type="button" (click)="logout()" aria-label="Cerrar sesión">Salir</button>
     </footer>
-
   }
-
 </aside>
+
+<!-- ── Mobile bottom navigation (hidden on ≥768px) ──────────── -->
+@if (isAuthenticated()) {
+  <nav class="bottom-nav" aria-label="Navegación principal">
+
+    <a class="bnav-item" routerLink="/home" routerLinkActive="bnav-active"
+      [routerLinkActiveOptions]="{ exact: true }" aria-label="Panel de control">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span class="bnav-label">Panel</span>
+    </a>
+
+    @if (isAdmin()) {
+      <a class="bnav-item" routerLink="/ternas" routerLinkActive="bnav-active"
+        aria-label="Ternas">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+          <rect x="8" y="2" width="8" height="4" rx="1"/>
+          <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/>
+        </svg>
+        <span class="bnav-label">Ternas</span>
+      </a>
+    }
+
+    <a class="bnav-item" routerLink="/evaluacion" routerLinkActive="bnav-active"
+      aria-label="Evaluación">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+      <span class="bnav-label">Evaluar</span>
+    </a>
+
+    @if (isAdmin()) {
+      <a class="bnav-item" routerLink="/resultados" routerLinkActive="bnav-active"
+        aria-label="Resultados">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+          <line x1="2" y1="20" x2="22" y2="20"/>
+        </svg>
+        <span class="bnav-label">Resultados</span>
+      </a>
+
+      <button type="button" class="bnav-item" (click)="toggleMobileMenu()"
+        [attr.aria-expanded]="isMobileMenuOpen()" aria-label="Más opciones">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>
+        </svg>
+        <span class="bnav-label">Más</span>
+      </button>
+    } @else {
+      <button type="button" class="bnav-item" (click)="logout()" aria-label="Cerrar sesión">
+        <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span class="bnav-label">Salir</span>
+      </button>
+    }
+  </nav>
+
+  <!-- ── Bottom sheet: Estudiantes, Evaluadores, Logout ─────── -->
+  @if (isMobileMenuOpen()) {
+    <button type="button" class="sheet-backdrop"
+      aria-label="Cerrar menú"
+      (click)="closeMobileMenu()">
+    </button>
+
+    <div class="bottom-sheet" role="dialog" aria-label="Más opciones" aria-modal="true">
+      <div class="sheet-handle" aria-hidden="true"></div>
+
+      <nav aria-label="Opciones adicionales">
+        <a class="sheet-item" routerLink="/estudiantes" routerLinkActive="sheet-active"
+          (click)="closeMobileMenu()" aria-label="Estudiantes">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>Estudiantes</span>
+        </a>
+
+        <a class="sheet-item" routerLink="/evaluadores" routerLinkActive="sheet-active"
+          (click)="closeMobileMenu()" aria-label="Evaluadores">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+            <polyline points="16 11 17 13 21 9"/>
+          </svg>
+          <span>Evaluadores</span>
+        </a>
+      </nav>
+
+      <button type="button" class="sheet-logout" (click)="logout()">
+        Cerrar sesión
+      </button>
+    </div>
+  }
+}

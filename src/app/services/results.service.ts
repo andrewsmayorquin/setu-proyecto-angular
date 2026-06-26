@@ -1,16 +1,18 @@
-import { Injectable, inject, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import {
   Firestore,
-  collection,
   addDoc,
+  collection,
+  doc,
   onSnapshot,
-  query,
   orderBy,
-  Unsubscribe
+  query,
+  updateDoc
 } from '@angular/fire/firestore';
+import { DataModeService } from './data-mode.service';
+import { LocalDbService } from './local-db.service';
 
-/** Modelo de datos de un resultado de evaluación */
 export interface Result {
   id?: string;
   teamId: string;
@@ -20,60 +22,54 @@ export interface Result {
   createdAt?: string;
 }
 
-/**
- * Servicio de resultados — conexión en tiempo real con la colección
- * 'resultados' de Firebase Firestore.
- *
- * Usa onSnapshot para mantener los datos sincronizados automáticamente.
- */
 @Injectable({ providedIn: 'root' })
 export class ResultsService implements OnDestroy {
   private readonly firestore = inject(Firestore);
-
-  /** Referencia a la colección 'resultados' en Firestore */
-  private readonly collectionRef = collection(this.firestore, 'resultados');
-
-  /** Subject interno que emite la lista actualizada de resultados */
-  private readonly resultsSubject = new BehaviorSubject<Result[]>([]);
-
-  /** Función para cancelar la suscripción a onSnapshot */
-  private unsubscribe: Unsubscribe;
+  private readonly dataMode = inject(DataModeService);
+  private readonly localDb = inject(LocalDbService);
+  private readonly collectionName = 'resultados';
+  private readonly collectionRef = collection(this.firestore, this.collectionName);
+  private readonly resultsSubject: BehaviorSubject<Result[]> = this.localDb.subject<Result>(this.collectionName);
+  private unsubscribe: () => void = () => {};
 
   constructor() {
-    // Escucha cambios en tiempo real de la colección 'resultados'
-    const q = query(this.collectionRef, orderBy('createdAt'));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      const results: Result[] = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as Result));
-      this.resultsSubject.next(results);
-    });
+    if (!this.dataMode.isLocal) {
+      const q = query(this.collectionRef, orderBy('createdAt'));
+      this.unsubscribe = onSnapshot(q, (snapshot: any) => {
+        const results: Result[] = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() } as Result));
+        this.resultsSubject.next(results);
+      });
+    }
   }
 
   ngOnDestroy(): void {
-    // Cancela la suscripción a Firestore al destruir el servicio
     this.unsubscribe();
   }
 
-  /** Lista de resultados */
   list(): Observable<Result[]> {
     return this.resultsSubject.asObservable();
   }
 
-  /** Crear resultados iniciales para estudiantes de una terna */
   async createForTeam(teamId: string, teamName: string, studentIds: string[]): Promise<void> {
     const now = new Date().toISOString();
-    // Guardar cada resultado como un documento en la colección 'resultados'
-    const promises = studentIds.map(studentId =>
-      addDoc(this.collectionRef, {
-        teamId,
-        teamName,
-        studentId,
-        score: 0,
-        createdAt: now
-      })
-    );
-    await Promise.all(promises);
+    const newResults = studentIds.map(studentId => ({ teamId, teamName, studentId, score: 0, createdAt: now }));
+
+    if (this.dataMode.isLocal) {
+      const localResults: Result[] = newResults.map(result => ({ ...result, id: crypto.randomUUID() }));
+      this.localDb.save(this.collectionName, this.resultsSubject, [...this.resultsSubject.value, ...localResults]);
+      return;
+    }
+
+    await Promise.all(newResults.map(result => addDoc(this.collectionRef, result)));
+  }
+
+  async updateScore(id: string, score: number): Promise<void> {
+    if (this.dataMode.isLocal) {
+      const results = this.resultsSubject.value.map(item => item.id === id ? { ...item, score } : item);
+      this.localDb.save(this.collectionName, this.resultsSubject, results);
+      return;
+    }
+
+    await updateDoc(doc(this.firestore, this.collectionName, id), { score });
   }
 }

@@ -1,7 +1,7 @@
 <div class="dashboard">
   <app-sidebar />
 
-  <main class="main-content">
+  <main id="contenido-principal" class="main-content" tabindex="-1">
     <header class="page-header">
       <div>
         <h1>Evaluadores</h1>
@@ -9,171 +9,194 @@
       </div>
     </header>
 
-<section class="filters" aria-label="Filtros de búsqueda">
-  <div class="field">
-    <label for="searchEvaluator">Buscar</label>
-    <input
-      id="searchEvaluator"
-      type="search"
-      placeholder="Nombre, usuario, correo o ID"
-      (input)="setSearch($any($event.target).value)"
-      appTippy="Busca por nombre, usuario, correo o ID" />
-  </div>
-</section>
-
-<section class="card" aria-labelledby="evaluator-form-title">
-  <h2 id="evaluator-form-title">
-    {{ isEditing() ? 'Editar evaluador' : 'Registrar evaluador' }}
-  </h2>
-
-  <form
-    class="crud-form"
-    [formGroup]="form"
-    (ngSubmit)="saveEvaluator()"
-    aria-label="Formulario de evaluador">
-
-    <fieldset class="form-grid">
-      <legend>Información del evaluador</legend>
-
+    <section class="filters" aria-label="Filtros de búsqueda">
       <div class="field">
-        <label for="evaluatorName">Nombre</label>
+        <label for="searchEvaluator">Buscar</label>
         <input
-          id="evaluatorName"
-          type="text"
-          placeholder="Nombre completo"
-          formControlName="name"
-          required />
+          id="searchEvaluator"
+          type="search"
+          placeholder="Nombre, usuario, correo o ID"
+          (input)="setSearch($any($event.target).value)"
+          appTippy="Busca por nombre, usuario, correo o ID" />
       </div>
+    </section>
 
-      <div class="field">
-        <label for="evaluatorEmail">Correo</label>
-        <input
-          id="evaluatorEmail"
-          type="email"
-          placeholder="correo@correo.com"
-          formControlName="email"
-          required />
-      </div>
+    <section class="card" aria-labelledby="evaluator-form-title">
+      <h2 id="evaluator-form-title">
+        {{ isEditing() ? 'Editar evaluador' : 'Registrar evaluador' }}
+      </h2>
 
-      <div class="field">
-        <label for="evaluatorSpecialty">Especialidad</label>
-        <input
-          id="evaluatorSpecialty"
-          type="text"
-          placeholder="Área de conocimiento"
-          formControlName="specialty"
-          required />
-      </div>
+      <form
+        class="crud-form"
+        [formGroup]="form"
+        (ngSubmit)="saveEvaluator()"
+        aria-label="Formulario de evaluador">
 
-      <div class="field">
-        <label for="evaluatorUsername">Usuario</label>
-        <input
-          id="evaluatorUsername"
-          type="text"
-          placeholder="Usuario de acceso"
-          formControlName="username"
-          required />
-      </div>
+        <fieldset class="form-grid">
+          <legend>Información del evaluador</legend>
 
-      <div class="field">
-        <label for="evaluatorPassword">Contraseña</label>
-        <input
-          id="evaluatorPassword"
-          type="password"
-          placeholder="Contraseña"
-          formControlName="password"
-          required />
-      </div>
-
-      <div class="field checkbox">
-        <input
-          id="evaluatorActive"
-          type="checkbox"
-          formControlName="active" />
-        <label for="evaluatorActive">Activo</label>
-      </div>
-    </fieldset>
-
-    <footer class="form-actions">
-      <button
-        class="btn-primary"
-        type="submit"
-        [disabled]="form.invalid">
-        {{ isEditing() ? 'Actualizar' : 'Guardar evaluador' }}
-      </button>
-
-      @if (isEditing()) {
-        <button
-          class="btn-secondary"
-          type="button"
-          (click)="cancelEdit()">
-          Cancelar
-        </button>
-      }
-    </footer>
-  </form>
-</section>
-
-<section class="table-card" aria-labelledby="evaluators-table-title">
-  <h2 id="evaluators-table-title">Evaluadores registrados</h2>
-
-  <table class="tabla" aria-label="Lista de evaluadores">
-    <thead>
-      <tr>
-        <th>Nombre</th>
-        <th>Usuario</th>
-        <th>Especialidad</th>
-        <th>Estado</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      @for (evaluator of evaluators(); track evaluator.id ?? evaluator.email) {
-        <tr>
-          <td>{{ evaluator.name }}</td>
-          <td>{{ evaluator.username }}</td>
-          <td>{{ evaluator.specialty }}</td>
-          <td>
-            <span
-              class="badge"
-              [class.badge-ok]="evaluator.active"
-              [class.badge-pending]="!evaluator.active">
-              {{ evaluator.active ? 'Activo' : 'Inactivo' }}
-            </span>
-          </td>
-
-          <td>
-            @if (evaluator.id) {
-
-              <button
-                class="link-button"
-                type="button"
-                (click)="editEvaluator(evaluator)">
-                Editar
-              </button>
-
-              <button
-                class="link-button danger"
-                type="button"
-                (click)="removeEvaluator(evaluator.id)">
-                Eliminar
-              </button>
-
+          <div class="field">
+            <label for="evaluatorName">Nombre</label>
+            <input
+              id="evaluatorName"
+              type="text"
+              placeholder="Nombre completo"
+              formControlName="name"
+              appTippy="Nombre completo del evaluador" />
+            @if (form.controls.name.touched && form.controls.name.invalid) {
+              <span class="field-error" role="alert">
+                @if (form.controls.name.errors?.['required']) { El nombre es obligatorio. }
+                @else if (form.controls.name.errors?.['minlength']) { Mínimo 3 caracteres. }
+              </span>
             }
-          </td>
-        </tr>
+          </div>
+
+          <div class="field">
+            <label for="evaluatorEmail">Correo</label>
+            <input
+              id="evaluatorEmail"
+              type="email"
+              placeholder="correo&#64;correo.com"
+              formControlName="email"
+              appTippy="Correo electrónico del evaluador" />
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <span class="field-error" role="alert">
+                @if (form.controls.email.errors?.['required']) { El correo es obligatorio. }
+                @else if (form.controls.email.errors?.['email']) { Ingresa un correo válido. }
+              </span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="evaluatorSpecialty">Especialidad</label>
+            <input
+              id="evaluatorSpecialty"
+              type="text"
+              placeholder="Área de conocimiento"
+              formControlName="specialty"
+              appTippy="Especialidad o área de conocimiento" />
+            @if (form.controls.specialty.touched && form.controls.specialty.invalid) {
+              <span class="field-error" role="alert">
+                @if (form.controls.specialty.errors?.['required']) { La especialidad es obligatoria. }
+                @else if (form.controls.specialty.errors?.['minlength']) { Mínimo 2 caracteres. }
+              </span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="evaluatorUsername">Usuario</label>
+            <input
+              id="evaluatorUsername"
+              type="text"
+              placeholder="Usuario de acceso"
+              formControlName="username"
+              appTippy="Nombre de usuario para iniciar sesión" />
+            @if (form.controls.username.touched && form.controls.username.invalid) {
+              <span class="field-error" role="alert">
+                @if (form.controls.username.errors?.['required']) { El usuario es obligatorio. }
+                @else if (form.controls.username.errors?.['minlength']) { Mínimo 3 caracteres. }
+              </span>
+            }
+          </div>
+
+          <div class="field">
+            <label for="evaluatorPassword">Contraseña</label>
+            <input
+              id="evaluatorPassword"
+              type="password"
+              placeholder="Contraseña"
+              formControlName="password"
+              appTippy="Contraseña de acceso del evaluador" />
+            @if (form.controls.password.touched && form.controls.password.invalid) {
+              <span class="field-error" role="alert">
+                @if (form.controls.password.errors?.['required']) { La contraseña es obligatoria. }
+                @else if (form.controls.password.errors?.['minlength']) { Mínimo 4 caracteres. }
+              </span>
+            }
+          </div>
+
+          <div class="field checkbox">
+            <input
+              id="evaluatorActive"
+              type="checkbox"
+              formControlName="active" />
+            <label for="evaluatorActive">Activo</label>
+          </div>
+        </fieldset>
+
+        <footer class="form-actions">
+          <button
+            class="btn-primary"
+            type="submit">
+            {{ isEditing() ? 'Actualizar' : 'Guardar evaluador' }}
+          </button>
+
+          @if (isEditing()) {
+            <button
+              class="btn-secondary"
+              type="button"
+              (click)="cancelEdit()">
+              Cancelar
+            </button>
+          }
+        </footer>
+      </form>
+    </section>
+
+    <section class="table-card" aria-labelledby="evaluators-table-title">
+      <h2 id="evaluators-table-title">Evaluadores registrados</h2>
+
+      <table class="tabla" aria-label="Lista de evaluadores">
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Usuario</th>
+            <th scope="col">Especialidad</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (evaluator of evaluators(); track evaluator.id ?? evaluator.email) {
+            <tr>
+              <td>{{ evaluator.name }}</td>
+              <td>{{ evaluator.username }}</td>
+              <td>{{ evaluator.specialty }}</td>
+              <td>
+                <span
+                  class="badge"
+                  [class.badge-ok]="evaluator.active"
+                  [class.badge-pending]="!evaluator.active">
+                  {{ evaluator.active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td>
+                @if (evaluator.id) {
+                  <button
+                    class="link-button"
+                    type="button"
+                    (click)="editEvaluator(evaluator)"
+                    [attr.aria-label]="'Editar ' + evaluator.name">
+                    Editar
+                  </button>
+                  <button
+                    class="link-button danger"
+                    type="button"
+                    (click)="removeEvaluator(evaluator.id)"
+                    [attr.aria-label]="'Eliminar ' + evaluator.name">
+                    Eliminar
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (evaluators().length === 0) {
+        <p class="empty-state">No hay evaluadores registrados.</p>
       }
-    </tbody>
-  </table>
-
-  @if (evaluators().length === 0) {
-    <p class="empty-state">
-      No hay evaluadores registrados.
-    </p>
-  }
-</section>
-```
-
+    </section>
   </main>
 </div>

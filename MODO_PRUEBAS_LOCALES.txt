@@ -1,0 +1,29 @@
+SETU - Modo de pruebas locales
+
+La app usa Firebase por defecto para base de datos y hosting.
+
+Para probar sin escribir en Firebase:
+1. Abre la app en el navegador.
+2. Presiona F12 y entra a Console.
+3. Ejecuta:
+
+localStorage.setItem('setu_data_mode', 'local'); location.reload();
+
+Desde ese momento estudiantes, evaluadores, ternas y resultados se guardan en localStorage.
+
+Para volver a Firebase:
+
+localStorage.setItem('setu_data_mode', 'firebase'); location.reload();
+
+Para borrar datos locales de prueba:
+
+localStorage.removeItem('setu_estudiantes');
+localStorage.removeItem('setu_evaluadores');
+localStorage.removeItem('setu_ternas');
+localStorage.removeItem('setu_resultados');
+location.reload();
+
+Notas:
+- No ejecutes npm audit fix --force porque puede romper versiones de Angular/Firebase.
+- Para instalar usa: npm install --legacy-peer-deps
+- Para ejecutar usa: npm start

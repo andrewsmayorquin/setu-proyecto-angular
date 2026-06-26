@@ -1,27 +1,26 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal
+} from '@angular/core';
+import { FormBuilder, FormRecord, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ToastrService } from 'ngx-toastr';
 import { SidebarComponent } from '../sidebar/sidebar';
-import { TeamsService } from '../../services/teams.service';
+import { AuthService } from '../../services/auth.service';
+import { EvaluationsService } from '../../services/evaluations.service';
+import { EvaluationCriterion, TeamsService } from '../../services/teams.service';
 import { StudentsService } from '../../services/students.service';
 import { EvaluatorsService } from '../../services/evaluators.service';
-import { ResultsService } from '../../services/results.service';
-import { AuthService } from '../../services/auth.service';
-
-interface EvaluationRecord {
-  id: string;
-  teamId: string;
-  studentId: string;
-  evaluatorId: string;
-  score100: number;
-  finalScore40: number;
-  createdAt: string;
-}
 
 @Component({
   selector: 'app-evaluacion',
   templateUrl: './evaluacion.html',
   styleUrl: './evaluacion.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, SidebarComponent]
 })
 export class EvaluacionComponent {
@@ -30,263 +29,237 @@ export class EvaluacionComponent {
   private readonly teamsService = inject(TeamsService);
   private readonly studentsService = inject(StudentsService);
   private readonly evaluatorsService = inject(EvaluatorsService);
-  private readonly resultsService = inject(ResultsService);
+  private readonly evaluationsService = inject(EvaluationsService);
+  private readonly toastr = inject(ToastrService);
 
   private readonly teamsSignal = toSignal(this.teamsService.list(), { initialValue: [] });
   private readonly studentsSignal = toSignal(this.studentsService.list(), { initialValue: [] });
   private readonly evaluatorsSignal = toSignal(this.evaluatorsService.list(), { initialValue: [] });
-  private readonly resultsSignal = toSignal(this.resultsService.list(), { initialValue: [] });
+  private readonly evaluationsSignal = toSignal(this.evaluationsService.list(), { initialValue: [] });
 
   readonly session = this.auth.session;
 
   readonly selectedTeamId = signal('');
   readonly selectedEvaluatorId = signal('');
   readonly selectedStudentId = signal('');
+  readonly autoSaveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
 
-  readonly criteria = [
-    'Dominio del tema',
-    'Presentación',
-    'Uso de recursos',
-    'Respuesta a preguntas',
-    'Conclusiones'
-  ];
-
-  readonly form = this.fb.nonNullable.group({
-    criterio1: [1, [Validators.required, Validators.min(1), Validators.max(5)]],
-    criterio2: [1, [Validators.required, Validators.min(1), Validators.max(5)]],
-    criterio3: [1, [Validators.required, Validators.min(1), Validators.max(5)]],
-    criterio4: [1, [Validators.required, Validators.min(1), Validators.max(5)]],
-    criterio5: [1, [Validators.required, Validators.min(1), Validators.max(5)]]
+  /** Dynamic form fields keyed by criterion id. */
+  readonly criteriaForm = new FormRecord<ReturnType<FormBuilder['nonNullable']['control']>>({});
+  // Reactive bridge so computed() tracks criteriaForm value changes as a signal.
+  private readonly criteriaFormValues = toSignal(this.criteriaForm.valueChanges, {
+    initialValue: this.criteriaForm.value
   });
 
-  readonly teams = computed(() => {
-    const currentSession = this.session();
-
-    if (currentSession?.role !== 'evaluador') {
-      return this.teamsSignal();
-    }
-
-    return this.teamsSignal().filter(team =>
-      team.evaluatorIds.includes(currentSession.evaluatorId ?? '')
-    );
-  });
+  // ── Derived from selected terna ──────────────────────────────────────────
 
   readonly selectedTeam = computed(() =>
-    this.teams().find(team => team.id === this.selectedTeamId())
+    this.teamsSignal().find(t => t.id === this.selectedTeamId())
   );
 
-  readonly currentEvaluator = computed(() => {
-    const currentSession = this.session();
+  readonly criteria = computed((): EvaluationCriterion[] =>
+    this.selectedTeam()?.criteria ?? []
+  );
 
-    if (currentSession?.role === 'evaluador') {
-      return this.evaluatorsSignal().find(
-        evaluator => evaluator.id === currentSession.evaluatorId
-      );
-    }
-
-    return this.evaluatorsSignal().find(
-      evaluator => evaluator.id === this.selectedEvaluatorId()
-    );
+  /** Teams visible to the current user. */
+  readonly teams = computed(() => {
+    const s = this.session();
+    if (s?.role !== 'evaluador') return this.teamsSignal();
+    return this.teamsSignal().filter(t => t.evaluatorIds.includes(s.evaluatorId ?? ''));
   });
 
+  /** Evaluators belonging to the selected terna (limited to self for evaluador role). */
   readonly evaluators = computed(() => {
-    const currentSession = this.session();
     const team = this.selectedTeam();
-
     if (!team) return [];
-
-    if (currentSession?.role === 'evaluador') {
-      return this.evaluatorsSignal().filter(evaluator =>
-        evaluator.id === currentSession.evaluatorId &&
-        team.evaluatorIds.includes(evaluator.id ?? '')
+    const s = this.session();
+    if (s?.role === 'evaluador') {
+      return this.evaluatorsSignal().filter(
+        e => e.id === s.evaluatorId && team.evaluatorIds.includes(e.id ?? '')
       );
     }
-
-    return this.evaluatorsSignal().filter(evaluator =>
-      team.evaluatorIds.includes(evaluator.id ?? '')
-    );
+    return this.evaluatorsSignal().filter(e => team.evaluatorIds.includes(e.id ?? ''));
   });
 
+  /**
+   * Students the current evaluator is assigned to.
+   * For admin: all students in the terna.
+   */
   readonly students = computed(() => {
     const team = this.selectedTeam();
-
     if (!team) return [];
+    const s = this.session();
+    const evalId = s?.role === 'evaluador' ? (s.evaluatorId ?? '') : this.selectedEvaluatorId();
 
-    return this.studentsSignal().filter(student =>
-      team.studentIds.includes(student.id ?? '')
-    );
+    const assignedIds = evalId && team.evaluatorStudentMap
+      ? (team.evaluatorStudentMap[evalId] ?? team.studentIds)
+      : team.studentIds;
+
+    return this.studentsSignal().filter(st => assignedIds.includes(st.id ?? ''));
+  });
+
+  /** Completion status for each student in the panel. */
+  readonly studentStatuses = computed(() => {
+    const team = this.selectedTeam();
+    const evalId = this.activeEvaluatorId();
+    if (!team || !evalId) return new Map<string, boolean>();
+
+    const map = new Map<string, boolean>();
+    for (const st of this.students()) {
+      const ev = this.evaluationsService.find(team.id ?? '', st.id ?? '', evalId);
+      map.set(st.id ?? '', ev?.status === 'submitted');
+    }
+    return map;
+  });
+
+  readonly activeEvaluatorId = computed(() => {
+    const s = this.session();
+    return s?.role === 'evaluador' ? (s.evaluatorId ?? '') : this.selectedEvaluatorId();
+  });
+
+  readonly currentEvaluator = computed(() =>
+    this.evaluatorsSignal().find(e => e.id === this.activeEvaluatorId())
+  );
+
+  /** Weighted total score 0–100 from the current form values. */
+  readonly liveScore = computed((): number => {
+    const crits = this.criteria();
+    const values = this.criteriaFormValues() as Record<string, number>;
+    if (!crits.length) return 0;
+    let total = 0;
+    for (const c of crits) {
+      const val = Number(values[c.id] ?? 0);
+      total += (val / c.maxScore) * c.weight;
+    }
+    return Math.round(total);
+  });
+
+  /** Final grade after applying terna weight. */
+  readonly liveGrade = computed((): number => {
+    const weight = this.selectedTeam()?.weight ?? 40;
+    return Math.round(this.liveScore() * weight / 100);
   });
 
   constructor() {
+    // Auto-set evaluatorId for evaluador role.
     effect(() => {
-      const currentSession = this.session();
-
-      if (currentSession?.role === 'evaluador' && currentSession.evaluatorId) {
-        this.selectedEvaluatorId.set(currentSession.evaluatorId);
+      const s = this.session();
+      if (s?.role === 'evaluador' && s.evaluatorId) {
+        this.selectedEvaluatorId.set(s.evaluatorId);
       }
     });
+
+    // Rebuild form controls when criteria change.
+    effect(() => {
+      const crits = this.criteria();
+      // Remove old controls
+      Object.keys(this.criteriaForm.controls).forEach(k => this.criteriaForm.removeControl(k));
+      // Add one control per criterion
+      for (const c of crits) {
+        this.criteriaForm.addControl(
+          c.id,
+          this.fb.nonNullable.control(0, [Validators.min(0), Validators.max(c.maxScore)])
+        );
+      }
+    });
+
   }
 
   setTeam(id: string): void {
     this.selectedTeamId.set(id);
-
-    const currentSession = this.session();
-
-    if (currentSession?.role === 'evaluador' && currentSession.evaluatorId) {
-      this.selectedEvaluatorId.set(currentSession.evaluatorId);
-    } else {
-      this.selectedEvaluatorId.set('');
-    }
-
+    const s = this.session();
+    if (s?.role !== 'evaluador') this.selectedEvaluatorId.set('');
     this.selectedStudentId.set('');
-
-    this.form.reset({
-      criterio1: 1,
-      criterio2: 1,
-      criterio3: 1,
-      criterio4: 1,
-      criterio5: 1
-    });
+    this.autoSaveStatus.set('idle');
   }
 
   setEvaluator(id: string): void {
-    const currentSession = this.session();
-
-    if (currentSession?.role === 'evaluador') {
-      return;
-    }
-
+    if (this.session()?.role === 'evaluador') return;
     this.selectedEvaluatorId.set(id);
-    this.loadPreviousEvaluation();
+    this.selectedStudentId.set('');
+    this.autoSaveStatus.set('idle');
   }
 
   setStudent(id: string): void {
     this.selectedStudentId.set(id);
-    this.loadPreviousEvaluation();
+    this.loadExisting();
+    this.autoSaveStatus.set('idle');
   }
 
-  async saveEvaluation(): Promise<void> {
-    const currentSession = this.session();
+  onCriterionChange(): void {
+    if (!this.selectedTeamId() || !this.activeEvaluatorId() || !this.selectedStudentId()) return;
+    this.autoSaveStatus.set('saving');
+    this.evaluationsService.scheduleAutoSave(this.buildRecord('draft'));
+    // Show "saved" after the 2s debounce settles.
+    setTimeout(() => this.autoSaveStatus.set('saved'), 2500);
+  }
 
-    if (currentSession?.role === 'evaluador' && currentSession.evaluatorId) {
-      this.selectedEvaluatorId.set(currentSession.evaluatorId);
-    }
-
-    if (!this.selectedTeamId() || !this.selectedEvaluatorId() || !this.selectedStudentId()) {
-      alert('Selecciona terna, evaluador y estudiante.');
+  async submitEvaluation(): Promise<void> {
+    if (!this.selectedTeamId() || !this.activeEvaluatorId() || !this.selectedStudentId()) {
+      this.toastr.warning('Selecciona terna, evaluador y estudiante.');
       return;
     }
 
-    if (currentSession?.role === 'evaluador') {
+    if (this.session()?.role === 'evaluador') {
       const team = this.selectedTeam();
-
-      if (!team?.evaluatorIds.includes(currentSession.evaluatorId ?? '')) {
-        alert('No tienes permiso para evaluar esta terna.');
+      if (!team?.evaluatorIds.includes(this.activeEvaluatorId())) {
+        this.toastr.error('No tienes permiso para evaluar esta terna.');
         return;
       }
     }
 
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+    if (this.criteriaForm.invalid) {
+      this.criteriaForm.markAllAsTouched();
+      this.toastr.warning('Completa todos los criterios antes de guardar.');
       return;
     }
-
-    const value = this.form.getRawValue();
-
-    const total =
-      value.criterio1 +
-      value.criterio2 +
-      value.criterio3 +
-      value.criterio4 +
-      value.criterio5;
-
-    const score100 = Math.round((total / 25) * 100);
-    const finalScore40 = Math.round(score100 * 0.4);
-
-    const records = this.loadEvaluations();
-
-    const evaluationId = this.createEvaluationId(
-      this.selectedTeamId(),
-      this.selectedStudentId(),
-      this.selectedEvaluatorId()
-    );
-
-    const filtered = records.filter(item => item.id !== evaluationId);
-
-    filtered.push({
-      id: evaluationId,
-      teamId: this.selectedTeamId(),
-      studentId: this.selectedStudentId(),
-      evaluatorId: this.selectedEvaluatorId(),
-      score100,
-      finalScore40,
-      createdAt: new Date().toISOString()
-    });
-
-    localStorage.setItem('setu_evaluations', JSON.stringify(filtered));
-
-    const studentEvaluations = filtered.filter(item =>
-      item.teamId === this.selectedTeamId() &&
-      item.studentId === this.selectedStudentId()
-    );
-
-    const average100 =
-      studentEvaluations.reduce((sum, item) => sum + item.score100, 0) /
-      studentEvaluations.length;
-
-    const resultFinalScore40 = Math.round(average100 * 0.4);
-
-    const result = this.resultsSignal().find(item =>
-      item.teamId === this.selectedTeamId() &&
-      item.studentId === this.selectedStudentId()
-    );
-
-    if (result?.id) {
-      await this.resultsService.updateScore(result.id, resultFinalScore40);
-    }
-
-    alert('Evaluación guardada correctamente.');
-  }
-
-  private loadPreviousEvaluation(): void {
-    if (!this.selectedTeamId() || !this.selectedEvaluatorId() || !this.selectedStudentId()) {
-      return;
-    }
-
-    const evaluationId = this.createEvaluationId(
-      this.selectedTeamId(),
-      this.selectedStudentId(),
-      this.selectedEvaluatorId()
-    );
-
-    const previousEvaluation = this.loadEvaluations().find(item => item.id === evaluationId);
-
-    if (!previousEvaluation) {
-      this.form.reset({
-        criterio1: 1,
-        criterio2: 1,
-        criterio3: 1,
-        criterio4: 1,
-        criterio5: 1
-      });
-    }
-  }
-
-  private createEvaluationId(
-    teamId: string,
-    studentId: string,
-    evaluatorId: string
-  ): string {
-    return `${teamId}_${studentId}_${evaluatorId}`;
-  }
-
-  private loadEvaluations(): EvaluationRecord[] {
-    const data = localStorage.getItem('setu_evaluations');
 
     try {
-      return data ? JSON.parse(data) : [];
+      await this.evaluationsService.save(this.buildRecord('submitted'));
+      this.autoSaveStatus.set('saved');
+      this.toastr.success('Evaluación guardada exitosamente.');
     } catch {
-      return [];
+      this.toastr.error('Error al guardar la evaluación.');
+    }
+  }
+
+  private buildRecord(status: 'draft' | 'submitted') {
+    const crits = this.criteria();
+    const criteriaScores = crits.map(c => ({
+      criterionId: c.id,
+      score: Number(this.criteriaForm.get(c.id)?.value ?? 0)
+    }));
+
+    // Calculate totalScore directly from form controls (not via signal) to avoid
+    // potential stale-signal issues when called from within an effect context.
+    const totalScore = Math.round(
+      crits.reduce((sum, c) => {
+        const val = Number(this.criteriaForm.get(c.id)?.value ?? 0);
+        return sum + (val / c.maxScore) * c.weight;
+      }, 0)
+    );
+
+    return {
+      ternaId: this.selectedTeamId(),
+      studentId: this.selectedStudentId(),
+      evaluatorId: this.activeEvaluatorId(),
+      criteriaScores,
+      totalScore,
+      status,
+      savedAt: new Date().toISOString()
+    };
+  }
+
+  private loadExisting(): void {
+    const existing = this.evaluationsService.find(
+      this.selectedTeamId(),
+      this.selectedStudentId(),
+      this.activeEvaluatorId()
+    );
+
+    for (const c of this.criteria()) {
+      const saved = existing?.criteriaScores.find(cs => cs.criterionId === c.id);
+      this.criteriaForm.get(c.id)?.setValue(saved?.score ?? 0);
     }
   }
 }

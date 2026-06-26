@@ -68,16 +68,20 @@ export class EstudiantesComponent {
       program: value.program.trim()
     };
 
-    const editingId = this.editingId();
-    if (editingId) {
-      await this.studentsService.update(editingId, payload);
-      this.toastr.success('Registro actualizado exitosamente');
-    } else {
-      await this.studentsService.create(payload);
-      this.toastr.success('Registro creado exitosamente');
+    try {
+      const editingId = this.editingId();
+      if (editingId) {
+        await this.studentsService.update(editingId, payload);
+        this.toastr.success('Registro actualizado exitosamente');
+      } else {
+        await this.studentsService.create(payload);
+        this.toastr.success('Registro creado exitosamente');
+      }
+      this.resetForm();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error al guardar el estudiante';
+      this.toastr.error(message);
     }
-
-    this.resetForm();
   }
 
   editStudent(student: Student): void {

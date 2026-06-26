@@ -1,121 +1,153 @@
-import { Injectable, inject, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import {
   Firestore,
-  collection,
   addDoc,
-  updateDoc,
+  collection,
   deleteDoc,
   doc,
   getDocs,
   onSnapshot,
-  query,
   orderBy,
-  Unsubscribe
+  query,
+  updateDoc
 } from '@angular/fire/firestore';
+import { DataModeService } from './data-mode.service';
+import { LocalDbService } from './local-db.service';
 
-/** Modelo de datos de un evaluador del sistema */
 export interface Evaluator {
   id?: string;
-
-  /** Nombre completo del evaluador */
   name: string;
-
-  /** Correo electrónico del evaluador */
   email: string;
-
-  /** Área de especialidad */
   specialty: string;
-
-  /** Usuario para iniciar sesión */
   username: string;
-
-  /** Contraseña para iniciar sesión */
   password: string;
-
-  /** Rol del usuario */
   role: 'evaluador';
-
-  /** Indica si el evaluador está activo */
   active: boolean;
 }
 
-/**
- * Servicio de evaluadores — conexión en tiempo real con la colección
- * 'evaluadores' de Firebase Firestore.
- *
- * Usa onSnapshot para mantener los datos sincronizados automáticamente.
- */
 @Injectable({ providedIn: 'root' })
 export class EvaluatorsService implements OnDestroy {
   private readonly firestore = inject(Firestore);
-
-  /** Referencia a la colección 'evaluadores' en Firestore */
-  private readonly collectionRef = collection(this.firestore, 'evaluadores');
-
-  /** Subject interno que emite la lista actualizada de evaluadores */
-  private readonly evaluatorsSubject = new BehaviorSubject<Evaluator[]>([]);
-
-  /** Función para cancelar la suscripción a onSnapshot */
-  private unsubscribe: Unsubscribe;
+  private readonly dataMode = inject(DataModeService);
+  private readonly localDb = inject(LocalDbService);
+  private readonly collectionName = 'evaluadores';
+  private readonly collectionRef = collection(this.firestore, this.collectionName);
+  private readonly evaluatorsSubject: BehaviorSubject<Evaluator[]> = this.localDb.subject<Evaluator>(this.collectionName);
+  private unsubscribe: () => void = () => {};
 
   constructor() {
-    // Escucha cambios en tiempo real de la colección 'evaluadores'
+    if (!this.dataMode.isLocal) {
+      this.initFirestore();
+    }
+  }
+
+  private initFirestore(): void {
     const q = query(this.collectionRef, orderBy('name'));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      const evaluators: Evaluator[] = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as Evaluator));
-      this.evaluatorsSubject.next(evaluators);
-    });
-  }
 
-  ngOnDestroy(): void {
-    // Cancela la suscripción a Firestore al destruir el servicio
-    this.unsubscribe();
-  }
+    getDocs(q).then((snap: any) => {
+      const items: Evaluator[] = snap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Evaluator));
+      if (items.length > 0) {
+        const local = this.evaluatorsSubject.value;
+        const firestoreIds = new Set(items.map(e => e.id));
+        const onlyLocal = local.filter(e => e.id && !firestoreIds.has(e.id));
+        const merged = [...items, ...onlyLocal];
+        this.evaluatorsSubject.next(merged);
+        localStorage.setItem(`setu_${this.collectionName}`, JSON.stringify(merged));
+      }
+    }).catch(() => {});
 
-  /** Busca un evaluador por su ID */
-  getById(id: string): Evaluator | undefined {
-    return this.evaluatorsSubject.value.find(
-      evaluator => evaluator.id === id
+    this.unsubscribe = onSnapshot(q,
+      (snapshot: any) => {
+        const items: Evaluator[] = snapshot.docs.map((d: any) => ({ id: d.id, ...d.data() } as Evaluator));
+        const local = this.evaluatorsSubject.value;
+        const firestoreIds = new Set(items.map(e => e.id));
+        const onlyLocal = local.filter(e => e.id && !firestoreIds.has(e.id));
+        const merged = [...items, ...onlyLocal];
+        this.evaluatorsSubject.next(merged);
+        if (items.length > 0 || local.length === 0) {
+          localStorage.setItem(`setu_${this.collectionName}`, JSON.stringify(merged));
+        }
+      },
+      () => {}
     );
   }
 
-  /** Lista de evaluadores */
+  ngOnDestroy(): void {
+    this.unsubscribe();
+  }
+
   list(): Observable<Evaluator[]> {
     return this.evaluatorsSubject.asObservable();
   }
 
-  /** Crear evaluador */
+  getById(id: string): Evaluator | undefined {
+    return this.evaluatorsSubject.value.find(evaluator => evaluator.id === id);
+  }
+
+  currentList(): Evaluator[] {
+    return this.evaluatorsSubject.value;
+  }
+
   async create(evaluator: Evaluator): Promise<void> {
     const { id, ...data } = evaluator;
-    await addDoc(this.collectionRef, data);
-  }
 
-  /** Actualiza los datos de un evaluador existente en Firestore */
-  async update(id: string, evaluator: Partial<Evaluator>): Promise<void> {
-    const ref = doc(this.firestore, 'evaluadores', id);
-    const { id: _, ...data } = evaluator;
-    await updateDoc(ref, data);
-  }
-
-  /** Elimina un evaluador de Firestore si no está asignado a ninguna terna */
-  async remove(id: string): Promise<void> {
-    // Verificar si el evaluador está referenciado en alguna terna
-    const teamsCol = collection(this.firestore, 'ternas');
-    const snap = await getDocs(teamsCol);
-    const isReferenced = snap.docs.some(d => {
-      const data = d.data() as { evaluatorIds?: string[] };
-      return data.evaluatorIds?.includes(id);
-    });
-
-    if (isReferenced) {
-      throw new Error('No se puede eliminar: el evaluador está asignado a una o más ternas');
+    if (this.dataMode.isLocal) {
+      const newEvaluator: Evaluator = { ...data, id: id ?? crypto.randomUUID() };
+      this.localDb.save(this.collectionName, this.evaluatorsSubject, [...this.evaluatorsSubject.value, newEvaluator]);
+      return;
     }
 
-    const ref = doc(this.firestore, 'evaluadores', id);
-    await deleteDoc(ref);
+    // Optimistic update with temp ID — replaced with real Firestore ID after addDoc resolves.
+    const tempId = crypto.randomUUID();
+    const withTemp = [...this.evaluatorsSubject.value, { ...data, id: tempId }];
+    this.evaluatorsSubject.next(withTemp);
+    localStorage.setItem(`setu_${this.collectionName}`, JSON.stringify(withTemp));
+
+    const docRef = await addDoc(this.collectionRef, data);
+    const withReal = withTemp.map(e => e.id === tempId ? { ...e, id: docRef.id } : e);
+    this.evaluatorsSubject.next(withReal);
+    localStorage.setItem(`setu_${this.collectionName}`, JSON.stringify(withReal));
+  }
+
+  async update(id: string, evaluator: Partial<Evaluator>): Promise<void> {
+    const { id: _, ...data } = evaluator;
+
+    if (this.dataMode.isLocal) {
+      const evaluators = this.evaluatorsSubject.value.map(item => item.id === id ? { ...item, ...data, id } : item);
+      this.localDb.save(this.collectionName, this.evaluatorsSubject, evaluators);
+      return;
+    }
+
+    const updated = this.evaluatorsSubject.value.map(e => e.id === id ? { ...e, ...data } : e);
+    this.evaluatorsSubject.next(updated);
+    localStorage.setItem(`setu_${this.collectionName}`, JSON.stringify(updated));
+    await updateDoc(doc(this.firestore, this.collectionName, id), data);
+  }
+
+  async remove(id: string): Promise<void> {
+    if (this.dataMode.isLocal) {
+      const teams = this.localDb.load<{ evaluatorIds?: string[] }>('ternas');
+      const isReferenced = teams.some(team => team.evaluatorIds?.includes(id));
+      if (isReferenced) throw new Error('No se puede eliminar: el evaluador está asignado a una o más ternas');
+
+      const evaluators = this.evaluatorsSubject.value.filter(evaluator => evaluator.id !== id);
+      this.localDb.save(this.collectionName, this.evaluatorsSubject, evaluators);
+      return;
+    }
+
+    const teamsCol = collection(this.firestore, 'ternas');
+    const snap = await getDocs(teamsCol);
+    const isReferenced = snap.docs.some((d: any) => {
+      const teamData = d.data() as { evaluatorIds?: string[] };
+      return teamData.evaluatorIds?.includes(id);
+    });
+
+    if (isReferenced) throw new Error('No se puede eliminar: el evaluador está asignado a una o más ternas');
+
+    const filtered = this.evaluatorsSubject.value.filter(e => e.id !== id);
+    this.evaluatorsSubject.next(filtered);
+    localStorage.setItem(`setu_${this.collectionName}`, JSON.stringify(filtered));
+    await deleteDoc(doc(this.firestore, this.collectionName, id));
   }
 }

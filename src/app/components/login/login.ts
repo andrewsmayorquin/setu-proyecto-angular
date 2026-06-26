@@ -22,7 +22,7 @@ export class LoginComponent {
     password: ['', Validators.required]
   });
 
-  submit(): void {
+  async submit(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -30,7 +30,7 @@ export class LoginComponent {
 
     const { username, password } = this.form.getRawValue();
 
-    const ok = this.auth.login(
+    const ok = await this.auth.login(
       username.trim(),
       password.trim()
     );

@@ -229,8 +229,170 @@
   text-align: center;
 }
 
-@media (max-width: 900px) {
-  .dashboard {
-    flex-direction: column;
+// ── Criteria table ─────────────────────────────────────────────────────────
+.form-section {
+  border: 1px solid var(--color-gray-200, #E2E8F0);
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  legend {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--color-gray-700, #334155);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px;
   }
+}
+
+.criteria-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.criteria-header {
+  display: grid;
+  grid-template-columns: 1fr 80px 80px 40px;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--color-gray-500, #64748B);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.criteria-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 80px 40px;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 8px;
+
+  input[type='text'] { padding: 7px 10px; border: 1.5px solid var(--color-gray-200, #E2E8F0); border-radius: 6px; font-size: 13px; }
+  input[type='number'] { padding: 7px 8px; border: 1.5px solid var(--color-gray-200, #E2E8F0); border-radius: 6px; font-size: 13px; text-align: center; }
+}
+
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+
+.btn-icon {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.2s;
+
+  &.danger { color: var(--color-danger, #DC2626); &:hover { background: var(--color-danger-light, #FEE2E2); } }
+}
+
+// ── Auto-assign ─────────────────────────────────────────────────────────────
+.auto-assign-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.assignment-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.assignment-card {
+  background: var(--color-gray-50, #F8FAFC);
+  border: 1px solid var(--color-gray-200, #E2E8F0);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 160px;
+
+  strong { display: block; font-size: 13px; color: var(--color-secondary, #002D5C); margin-bottom: 6px; }
+  ul { list-style: disc; padding-left: 16px; font-size: 12px; color: var(--color-gray-600, #475569); li { margin-bottom: 2px; } }
+}
+
+// ── Chips / autocomplete ─────────────────────────────────────────────────────
+.autocomplete-box { position: relative; }
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--color-white, #fff);
+  border: 1.5px solid var(--color-gray-200, #E2E8F0);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+  z-index: 50;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+
+  li button {
+    width: 100%;
+    text-align: left;
+    padding: 9px 14px;
+    font-size: 13px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-gray-800, #1E293B);
+
+    &:hover { background: var(--color-gray-50, #F8FAFC); }
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--color-primary, #C8102E);
+  color: #fff;
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+
+  button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+  }
+}
+
+.hint { font-size: 12px; color: var(--color-gray-500, #64748B); }
+.text-muted { color: var(--color-gray-400, #94A3B8); }
+
+@media (max-width: 767px) {
+  .main-content { padding: 14px; }
+  .criteria-header,
+  .criteria-row { grid-template-columns: 1fr 64px 64px 36px; }
+  .form-actions { flex-direction: column; }
+  .link-button { min-height: 44px; padding: 10px 12px; }
+  .btn-sm { min-height: 44px; }
+  .chips { gap: 8px; }
+  .chip { padding: 6px 10px; font-size: 13px; }
 }

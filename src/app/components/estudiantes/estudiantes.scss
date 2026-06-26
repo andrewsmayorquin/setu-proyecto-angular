@@ -191,14 +191,15 @@
   text-align: center;
 }
 
-@media (max-width: 900px) {
-  .dashboard {
-    flex-direction: column;
-  }
+@media (max-width: 767px) {
+  .main-content { padding: 14px; }
+  .crud-form { padding: 16px; }
+  .form-actions { flex-direction: column; }
+  .link-button { min-height: 44px; padding: 10px 14px; }
+}
 
-  .tabla {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+.tabla {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }

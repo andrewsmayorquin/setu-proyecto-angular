@@ -175,3 +175,16 @@
     padding: 52px 44px;
   }
 }
+/* Login siempre ocupa toda la pantalla; nunca reserva espacio para sidebar */
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.login-container {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 !important;
+}

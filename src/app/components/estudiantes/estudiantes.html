@@ -1,7 +1,7 @@
 <div class="dashboard">
   <app-sidebar />
 
-  <main class="main-content">
+  <main id="contenido-principal" class="main-content" tabindex="-1">
     <header class="page-header">
       <div>
         <h1>Estudiantes</h1>
@@ -112,9 +112,7 @@
         <footer class="form-actions">
           <button
             class="btn-primary"
-            type="submit"
-            [disabled]="form.invalid"
-            [attr.aria-disabled]="form.invalid">
+            type="submit">
             {{ isEditing() ? 'Actualizar estudiante' : 'Crear estudiante' }}
           </button>
 

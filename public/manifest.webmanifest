@@ -1,0 +1,64 @@
+{
+  "name": "SETU - Sistema de Evaluación de Ternas Universitarias",
+  "short_name": "SETU",
+  "description": "Aplicación accesible para evaluación universitaria de ternas, resultados y reportes.",
+  "lang": "es-HN",
+  "dir": "ltr",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#f8fafc",
+  "theme_color": "#9f1239",
+  "orientation": "portrait-primary",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    { "src": "icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-256x256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/dashboard-desktop.png",
+      "sizes": "1600x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Panel de control de SETU en escritorio"
+    },
+    {
+      "src": "screenshots/dashboard-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Panel de control de SETU en móvil"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva terna",
+      "short_name": "Terna",
+      "description": "Crear una nueva terna universitaria",
+      "url": "/ternas",
+      "icons": [{ "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Evaluación",
+      "short_name": "Evaluar",
+      "description": "Abrir el formulario de evaluación",
+      "url": "/evaluacion",
+      "icons": [{ "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Resultados",
+      "short_name": "Resultados",
+      "description": "Ver resultados y ranking de tesis",
+      "url": "/resultados",
+      "icons": [{ "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

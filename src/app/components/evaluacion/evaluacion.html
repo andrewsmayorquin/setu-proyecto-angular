@@ -1,81 +1,168 @@
 <div class="dashboard">
   <app-sidebar />
 
-  <main class="main-content">
+  <main id="contenido-principal" class="main-content" tabindex="-1">
     <header class="page-header">
       <div>
         <h1>Evaluación de terna</h1>
-        <p>Selecciona la terna y el estudiante a evaluar.</p>
+        <p>Selecciona la terna, el evaluador y el estudiante. Los cambios se guardan automáticamente.</p>
       </div>
     </header>
 
-    <section class="card">
-      <label>Terna</label>
-      <select #teamSelect (change)="setTeam(teamSelect.value)">
-        <option value="">Selecciona una terna</option>
-        @for (team of teams(); track team.id) {
-          <option [value]="team.id">{{ team.name }}</option>
-        }
-      </select>
+    <!-- ── Selección ── -->
+    <section class="card" aria-labelledby="selection-title">
+      <h2 id="selection-title">Datos de la evaluación</h2>
 
-      <label>Evaluador</label>
+      <div class="selection-grid">
+        <div class="field">
+          <label for="teamSelect">Terna</label>
+          <select id="teamSelect" #teamSelect (change)="setTeam(teamSelect.value)" required
+            aria-describedby="teamHelp">
+            <option value="">Selecciona una terna</option>
+            @for (team of teams(); track team.id) {
+              <option [value]="team.id">{{ team.name }} — {{ team.date }}</option>
+            }
+          </select>
+          <span id="teamHelp" class="hint">Solo aparecen las ternas asignadas a tu rol.</span>
+        </div>
 
-      @if (session()?.role === 'evaluador') {
-        <input
-          type="text"
-          [value]="currentEvaluator()?.name || session()?.name"
-          readonly>
-      } @else {
-        <select #evaluatorSelect (change)="setEvaluator(evaluatorSelect.value)">
-          <option value="">Selecciona evaluador</option>
-          @for (evaluator of evaluators(); track evaluator.id) {
-            <option [value]="evaluator.id">{{ evaluator.name }}</option>
+        <div class="field">
+          <label for="evaluatorSelect">Evaluador</label>
+          @if (session()?.role === 'evaluador') {
+            <input id="evaluatorSelect" type="text"
+              [value]="currentEvaluator()?.name ?? session()?.name"
+              readonly aria-readonly="true" />
+          } @else {
+            <select id="evaluatorSelect" #evaluatorSelect
+              (change)="setEvaluator(evaluatorSelect.value)" required>
+              <option value="">Selecciona evaluador</option>
+              @for (ev of evaluators(); track ev.id) {
+                <option [value]="ev.id">{{ ev.name }}</option>
+              }
+            </select>
           }
-        </select>
+        </div>
+
+        <div class="field">
+          <label for="studentSelect">Estudiante asignado</label>
+          <select id="studentSelect" #studentSelect
+            (change)="setStudent(studentSelect.value)" required>
+            <option value="">Selecciona estudiante</option>
+            @for (st of students(); track st.id) {
+              <option [value]="st.id">
+                {{ st.name }}
+                @if (studentStatuses().get(st.id ?? '')) { ✓ }
+              </option>
+            }
+          </select>
+          <span class="hint">Solo aparecen los estudiantes que te han sido asignados.</span>
+        </div>
+      </div>
+
+      <!-- Info de terna -->
+      @if (selectedTeam()) {
+        <div class="terna-meta" role="complementary" aria-label="Información de la terna">
+          <span>📅 {{ selectedTeam()!.date }} {{ selectedTeam()!.hora }}</span>
+          <span>🏫 {{ selectedTeam()!.aula }}</span>
+          <span>⚖️ Ponderación: {{ selectedTeam()!.weight }}%</span>
+        </div>
       }
-
-      <label>Estudiante</label>
-      <select #studentSelect (change)="setStudent(studentSelect.value)">
-        <option value="">Selecciona estudiante</option>
-        @for (student of students(); track student.id) {
-          <option [value]="student.id">{{ student.name }}</option>
-        }
-      </select>
     </section>
 
-    <section class="card">
-      <h2>Criterios de evaluación</h2>
+    <!-- ── Panel de estado por estudiante ── -->
+    @if (students().length > 0 && activeEvaluatorId()) {
+      <section class="card" aria-labelledby="status-title">
+        <h2 id="status-title">Estado de evaluaciones</h2>
+        <ul class="student-status-list" role="list">
+          @for (st of students(); track st.id) {
+            <li class="status-item"
+              [class.status-done]="studentStatuses().get(st.id ?? '')"
+              [class.status-pending]="!studentStatuses().get(st.id ?? '')">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span>{{ st.name }}</span>
+              <span class="status-label">
+                {{ studentStatuses().get(st.id ?? '') ? 'Completada' : 'Pendiente' }}
+              </span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
 
-      <form [formGroup]="form" (ngSubmit)="saveEvaluation()">
-        <div class="criteria-row">
-          <span>Dominio del tema</span>
-          <input type="number" min="1" max="5" formControlName="criterio1">
-        </div>
+    <!-- ── Formulario de evaluación ── -->
+    @if (selectedStudentId() && activeEvaluatorId() && criteria().length > 0) {
+      <section class="card" aria-labelledby="criteria-title">
+        <h2 id="criteria-title">Criterios de evaluación</h2>
 
-        <div class="criteria-row">
-          <span>Presentación</span>
-          <input type="number" min="1" max="5" formControlName="criterio2">
-        </div>
+        <form [formGroup]="criteriaForm" (ngSubmit)="submitEvaluation()"
+          aria-describedby="criteria-help">
 
-        <div class="criteria-row">
-          <span>Uso de recursos</span>
-          <input type="number" min="1" max="5" formControlName="criterio3">
-        </div>
+          <p id="criteria-help" class="hint">
+            Califica cada criterio de 0 al máximo indicado. El total se calcula automáticamente.
+          </p>
 
-        <div class="criteria-row">
-          <span>Respuesta a preguntas</span>
-          <input type="number" min="1" max="5" formControlName="criterio4">
-        </div>
+          <div class="criteria-list" role="list">
+            @for (criterion of criteria(); track criterion.id) {
+              <div class="criteria-row" role="listitem">
+                <div class="criteria-info">
+                  <label [for]="'c_' + criterion.id" class="criteria-label">
+                    {{ criterion.name }}
+                  </label>
+                  <span class="criteria-meta">
+                    Peso: {{ criterion.weight }}% &nbsp;|&nbsp; Escala: 0–{{ criterion.maxScore }}
+                  </span>
+                </div>
+                <input
+                  [id]="'c_' + criterion.id"
+                  type="number"
+                  inputmode="numeric"
+                  [min]="0"
+                  [max]="criterion.maxScore"
+                  [formControlName]="criterion.id"
+                  (change)="onCriterionChange()"
+                  [attr.aria-label]="'Calificación de ' + criterion.name + ', 0 a ' + criterion.maxScore"
+                  class="score-input" />
+              </div>
+            }
+          </div>
 
-        <div class="criteria-row">
-          <span>Conclusiones</span>
-          <input type="number" min="1" max="5" formControlName="criterio5">
-        </div>
+          <!-- Score summary -->
+          <div class="score-summary" role="status" aria-live="polite" aria-atomic="true">
+            <div class="score-card">
+              <span class="score-label">Puntaje (0–100)</span>
+              <span class="score-value">{{ liveScore() }}</span>
+            </div>
+            <div class="score-card highlight">
+              <span class="score-label">Nota final (/{{ selectedTeam()!.weight }})</span>
+              <span class="score-value">{{ liveGrade() }}</span>
+            </div>
+          </div>
 
-        <button type="submit">
-          Guardar evaluación
-        </button>
-      </form>
-    </section>
+          <!-- Auto-save status -->
+          <div class="autosave-bar" aria-live="polite">
+            @switch (autoSaveStatus()) {
+              @case ('saving') { <span class="autosave saving">⏳ Guardando borrador…</span> }
+              @case ('saved')  { <span class="autosave saved">✓ Guardado automáticamente</span> }
+              @default         { <span class="autosave idle">Los cambios se guardan en 2 s de inactividad.</span> }
+            }
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="btn-primary"
+              [disabled]="criteriaForm.invalid"
+              [attr.aria-disabled]="criteriaForm.invalid"
+              aria-label="Guardar evaluación de forma definitiva">
+              Guardar evaluación
+            </button>
+          </div>
+        </form>
+      </section>
+    } @else if (selectedTeamId() && !criteria().length) {
+      <p class="hint card">Esta terna aún no tiene criterios configurados.</p>
+    } @else if (!selectedStudentId() && selectedTeamId()) {
+      <p class="hint card">Selecciona un estudiante para comenzar la evaluación.</p>
+    }
   </main>
 </div>

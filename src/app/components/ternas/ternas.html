@@ -1,17 +1,14 @@
 <div class="dashboard">
   <app-sidebar />
 
-  <main class="main-content">
+  <main id="contenido-principal" class="main-content" tabindex="-1">
     <header class="topbar">
       <h1>Gestión de ternas</h1>
-      <p>Administra grupos, miembros y fechas clave.</p>
+      <p>Crea, configura y administra ternas de evaluación.</p>
     </header>
 
     <section class="filters" aria-label="Filtros de búsqueda">
-      <label class="field" for="searchTeam">
-        Buscar
-      </label>
-
+      <label class="field" for="searchTeam">Buscar</label>
       <input
         id="searchTeam"
         type="search"
@@ -21,228 +18,270 @@
     </section>
 
     <section class="section" aria-labelledby="ternas-form-title">
-      <h2 id="ternas-form-title">
-        {{ isEditing() ? 'Editar terna' : 'Crear terna' }}
-      </h2>
+      <h2 id="ternas-form-title">{{ isEditing() ? 'Editar terna' : 'Nueva terna' }}</h2>
 
-      <form
-        class="crud-form"
-        [formGroup]="form"
-        (ngSubmit)="saveTeam()"
-        aria-label="Formulario de terna">
+      <form class="crud-form" [formGroup]="form" (ngSubmit)="saveTeam()" aria-label="Formulario de terna">
 
+        <!-- ── Información general ── -->
         <fieldset class="form-grid">
-          <legend>Información de la terna</legend>
+          <legend>Información general</legend>
 
           <label class="field">
             Nombre
-            <input
-              type="text"
-              formControlName="name"
-              placeholder="Nombre de la terna"
+            <input type="text" formControlName="name" placeholder="Ej. Terna Enero 2025"
               appTippy="Nombre descriptivo de la terna" />
-
             @if (form.controls.name.touched && form.controls.name.invalid) {
-              <span class="field-error" role="alert">
-                El nombre de la terna es obligatorio.
-              </span>
+              <span class="field-error" role="alert">El nombre es obligatorio (mínimo 3 caracteres).</span>
             }
           </label>
 
           <label class="field">
             Fecha
-            <input
-              type="date"
-              formControlName="date"
-              appTippy="Fecha programada para la evaluación" />
-
+            <input type="date" formControlName="date" appTippy="Fecha de la defensa" />
             @if (form.controls.date.touched && form.controls.date.invalid) {
-              <span class="field-error" role="alert">
-                La fecha es obligatoria.
-              </span>
+              <span class="field-error" role="alert">La fecha es obligatoria.</span>
             }
           </label>
 
-          <div class="field autocomplete-box">
-            <label for="studentSearch">Estudiantes</label>
-
-            <input
-              id="studentSearch"
-              type="text"
-              placeholder="Buscar estudiante..."
-              [value]="studentSearch()"
-              (input)="setStudentSearch($any($event.target).value)"
-              appTippy="Escribe para buscar estudiantes guardados" />
-
-            @if (filteredStudents().length > 0) {
-              <ul class="suggestions">
-                @for (student of filteredStudents(); track student.id ?? student.email) {
-                  <li>
-                    <button
-                      type="button"
-                      (click)="addStudent(student.id)">
-                      {{ student.name }} ({{ student.program }})
-                    </button>
-                  </li>
-                }
-              </ul>
+          <label class="field">
+            Hora
+            <input type="time" formControlName="hora" appTippy="Hora de inicio de la evaluación" />
+            @if (form.controls.hora.touched && form.controls.hora.invalid) {
+              <span class="field-error" role="alert">La hora es obligatoria.</span>
             }
+          </label>
 
-            <div class="chips">
-              @for (student of selectedStudents(); track student.id ?? student.email) {
-                <span class="chip">
-                  {{ student.name }}
-                  <button
-                    type="button"
-                    (click)="removeStudent(student.id)"
-                    aria-label="Quitar estudiante">
-                    ×
-                  </button>
-                </span>
-              }
-            </div>
-
-            @if (form.controls.studentIds.touched && form.controls.studentIds.invalid) {
-              <span class="field-error" role="alert">
-                Selecciona al menos un estudiante.
-              </span>
+          <label class="field">
+            Aula / Lugar
+            <input type="text" formControlName="aula" placeholder="Ej. Aula 204 – Edificio A"
+              appTippy="Lugar donde se realizará la defensa" />
+            @if (form.controls.aula.touched && form.controls.aula.invalid) {
+              <span class="field-error" role="alert">El aula es obligatoria.</span>
             }
-          </div>
+          </label>
 
-          <div class="field autocomplete-box">
-            <label for="evaluatorSearch">Evaluadores</label>
-
-            <input
-              id="evaluatorSearch"
-              type="text"
-              placeholder="Buscar evaluador..."
-              [value]="evaluatorSearch()"
-              (input)="setEvaluatorSearch($any($event.target).value)"
-              appTippy="Escribe para buscar evaluadores guardados" />
-
-            @if (filteredEvaluators().length > 0) {
-              <ul class="suggestions">
-                @for (evaluator of filteredEvaluators(); track evaluator.id ?? evaluator.email) {
-                  <li>
-                    <button
-                      type="button"
-                      (click)="addEvaluator(evaluator.id)">
-                      {{ evaluator.name }} ({{ evaluator.specialty }})
-                    </button>
-                  </li>
-                }
-              </ul>
+          <label class="field">
+            Ponderación final (%)
+            <input type="number" formControlName="weight" min="1" max="100"
+              appTippy="Porcentaje que representa esta terna en la nota final del estudiante (ej. 40)" />
+            @if (form.controls.weight.touched && form.controls.weight.invalid) {
+              <span class="field-error" role="alert">Valor entre 1 y 100.</span>
             }
-
-            <div class="chips">
-              @for (evaluator of selectedEvaluators(); track evaluator.id ?? evaluator.email) {
-                <span class="chip">
-                  {{ evaluator.name }}
-                  <button
-                    type="button"
-                    (click)="removeEvaluator(evaluator.id)"
-                    aria-label="Quitar evaluador">
-                    ×
-                  </button>
-                </span>
-              }
-            </div>
-
-            @if (form.controls.evaluatorIds.touched && form.controls.evaluatorIds.invalid) {
-              <span class="field-error" role="alert">
-                Selecciona al menos dos evaluadores.
-              </span>
-            }
-          </div>
+          </label>
 
           <label class="field">
             Estado
-
-            <select
-              formControlName="status"
-              appTippy="Define el estado de la terna">
+            <select formControlName="status" appTippy="Define el estado actual de la terna">
               <option value="pending">En progreso</option>
               <option value="completed">Completada</option>
             </select>
           </label>
         </fieldset>
 
+        <!-- ── Criterios de evaluación ── -->
+        <fieldset class="form-section">
+          <legend>
+            Criterios de evaluación
+            <span
+              class="badge"
+              [class.badge-ok]="criteriaWeightValid()"
+              [class.badge-pending]="!criteriaWeightValid()"
+              [appTippy]="criteriaWeightValid() ? 'Pesos correctos' : 'Los pesos deben sumar 100%'">
+              {{ criteriaWeightSum() }}% / 100%
+            </span>
+          </legend>
+
+          <div class="criteria-table" role="table" aria-label="Criterios de evaluación">
+            <div class="criteria-header" role="row">
+              <span role="columnheader">Nombre del criterio</span>
+              <span role="columnheader">Peso (%)</span>
+              <span role="columnheader">Escala máx.</span>
+              <span role="columnheader">Acción</span>
+            </div>
+
+            <div formArrayName="criteria">
+              @for (ctrl of criteriaArray.controls; track $index) {
+                <div class="criteria-row" role="row" [formGroupName]="$index">
+                  <input type="text" formControlName="name" placeholder="Nombre del criterio"
+                    aria-label="Nombre del criterio" />
+                  <input type="number" formControlName="weight" min="1" max="100" placeholder="%"
+                    aria-label="Peso del criterio en porcentaje" />
+                  <input type="number" formControlName="maxScore" min="1" max="100" placeholder="Máx"
+                    aria-label="Puntuación máxima del criterio" />
+                  <button type="button" class="btn-icon danger" (click)="removeCriterion($index)"
+                    aria-label="Eliminar criterio">×</button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <button type="button" class="btn-secondary btn-sm" (click)="addCriterion()"
+            appTippy="Agregar nuevo criterio de evaluación">
+            + Agregar criterio
+          </button>
+        </fieldset>
+
+        <!-- ── Estudiantes ── -->
+        <fieldset class="form-section">
+          <legend>Estudiantes</legend>
+
+          <div class="field autocomplete-box">
+            <label for="studentSearch">Buscar estudiante</label>
+            <input id="studentSearch" type="text" placeholder="Nombre, correo o carrera..."
+              [value]="studentSearch()"
+              (input)="setStudentSearch($any($event.target).value)"
+              appTippy="Escribe para buscar estudiantes registrados" />
+
+            @if (filteredStudents().length > 0) {
+              <ul class="suggestions" role="listbox" aria-label="Sugerencias de estudiantes">
+                @for (student of filteredStudents(); track student.id ?? student.email) {
+                  <li role="option">
+                    <button type="button" (click)="addStudent(student.id)">
+                      {{ student.name }} <span class="text-muted">({{ student.program }})</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+
+            <div class="chips" aria-label="Estudiantes seleccionados">
+              @for (student of selectedStudents(); track student.id ?? student.email) {
+                <span class="chip">
+                  {{ student.name }}
+                  <button type="button" (click)="removeStudent(student.id)" aria-label="Quitar estudiante {{student.name}}">×</button>
+                </span>
+              }
+            </div>
+
+            @if (form.controls.studentIds.touched && form.controls.studentIds.invalid) {
+              <span class="field-error" role="alert">Selecciona al menos un estudiante.</span>
+            }
+          </div>
+        </fieldset>
+
+        <!-- ── Evaluadores ── -->
+        <fieldset class="form-section">
+          <legend>Evaluadores</legend>
+
+          <div class="field autocomplete-box">
+            <label for="evaluatorSearch">Buscar evaluador</label>
+            <input id="evaluatorSearch" type="text" placeholder="Nombre, correo o especialidad..."
+              [value]="evaluatorSearch()"
+              (input)="setEvaluatorSearch($any($event.target).value)"
+              appTippy="Escribe para buscar evaluadores registrados" />
+
+            @if (filteredEvaluators().length > 0) {
+              <ul class="suggestions" role="listbox" aria-label="Sugerencias de evaluadores">
+                @for (evaluator of filteredEvaluators(); track evaluator.id ?? evaluator.email) {
+                  <li role="option">
+                    <button type="button" (click)="addEvaluator(evaluator.id)">
+                      {{ evaluator.name }} <span class="text-muted">({{ evaluator.specialty }})</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+
+            <div class="chips" aria-label="Evaluadores seleccionados">
+              @for (evaluator of selectedEvaluators(); track evaluator.id ?? evaluator.email) {
+                <span class="chip">
+                  {{ evaluator.name }}
+                  <button type="button" (click)="removeEvaluator(evaluator.id)" aria-label="Quitar evaluador {{evaluator.name}}">×</button>
+                </span>
+              }
+            </div>
+
+            @if (form.controls.evaluatorIds.touched && form.controls.evaluatorIds.invalid) {
+              <span class="field-error" role="alert">Selecciona al menos dos evaluadores.</span>
+            }
+          </div>
+
+          <!-- Auto-assign -->
+          @if (form.controls.studentIds.value.length > 0 && form.controls.evaluatorIds.value.length > 0) {
+            <div class="auto-assign-bar">
+              <button type="button" class="btn-secondary btn-sm" (click)="autoAssignStudents()"
+                appTippy="Distribuye los estudiantes equitativamente entre evaluadores">
+                ⟳ Asignación automática
+              </button>
+
+              @if (showPreview()) {
+                <span class="hint">Vista previa de asignación (se guardará al crear/actualizar la terna).</span>
+              }
+            </div>
+
+            @if (showPreview()) {
+              <div class="assignment-preview" aria-label="Vista previa de asignación">
+                @for (entry of assignmentPreview() | keyvalue; track entry.key) {
+                  <div class="assignment-card">
+                    <strong>{{ evaluatorName(entry.key) }}</strong>
+                    <ul>
+                      @for (sid of entry.value; track sid) {
+                        <li>{{ studentName(sid) }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
+            }
+          }
+        </fieldset>
+
+        <!-- ── Acciones ── -->
         <footer class="form-actions">
           <button
             class="btn-primary"
             type="submit"
             [disabled]="saving()"
-            [appTippy]="form.invalid ? submitHint() : (isEditing() ? 'Guardar cambios' : 'Crear terna')">
-
-            @if (saving()) {
-              Guardando...
-            } @else {
-              {{ isEditing() ? 'Actualizar terna' : 'Crear terna' }}
-            }
+            [appTippy]="(form.invalid || !criteriaWeightValid()) ? submitHint() : (isEditing() ? 'Guardar cambios' : 'Crear terna')">
+            @if (saving()) { Guardando... } @else { {{ isEditing() ? 'Actualizar terna' : 'Crear terna' }} }
           </button>
 
           @if (isEditing()) {
-            <button
-              class="btn-secondary"
-              type="button"
-              (click)="cancelEdit()">
-              Cancelar
-            </button>
+            <button class="btn-secondary" type="button" (click)="cancelEdit()">Cancelar</button>
           }
         </footer>
 
-        @if (form.invalid && form.dirty) {
-          <p class="form-hint" role="status">
-            {{ submitHint() }}
-          </p>
+        @if ((form.invalid || !criteriaWeightValid()) && form.dirty) {
+          <p class="form-hint" role="status">{{ submitHint() }}</p>
         }
       </form>
 
+      <!-- ── Tabla de ternas ── -->
       <table class="tabla" aria-label="Lista de ternas">
         <thead>
           <tr>
             <th scope="col">Nombre</th>
             <th scope="col">Fecha</th>
+            <th scope="col">Hora</th>
+            <th scope="col">Aula</th>
             <th scope="col">Estudiantes</th>
             <th scope="col">Evaluadores</th>
+            <th scope="col">Pond.</th>
             <th scope="col">Estado</th>
             <th scope="col">Acciones</th>
           </tr>
         </thead>
-
         <tbody>
           @for (team of teams(); track team.id ?? team.name) {
             <tr>
               <td>{{ team.name }}</td>
               <td>{{ team.date }}</td>
+              <td>{{ team.hora }}</td>
+              <td>{{ team.aula }}</td>
               <td>{{ team.studentIds.length }}</td>
               <td>{{ team.evaluatorIds.length }}</td>
+              <td>{{ team.weight }}%</td>
               <td>
-                <span
-                  class="badge"
+                <span class="badge"
                   [class.badge-ok]="team.status === 'completed'"
                   [class.badge-pending]="team.status === 'pending'">
                   {{ team.status === 'completed' ? 'Completada' : 'En progreso' }}
                 </span>
               </td>
-
               <td>
                 @if (team.id) {
-                  <button
-                    type="button"
-                    class="link-button"
-                    (click)="editTeam(team)"
-                    appTippy="Editar terna">
-                    Editar
-                  </button>
-
-                  <button
-                    type="button"
-                    class="link-button danger"
-                    (click)="removeTeam(team.id)"
-                    appTippy="Eliminar terna">
-                    Eliminar
-                  </button>
+                  <button type="button" class="link-button" (click)="editTeam(team)" appTippy="Editar terna">Editar</button>
+                  <button type="button" class="link-button danger" (click)="removeTeam(team.id)" appTippy="Eliminar terna">Eliminar</button>
                 }
               </td>
             </tr>
@@ -251,10 +290,8 @@
       </table>
 
       @if (teams().length === 0) {
-        <p class="empty-state">
-          No hay ternas registradas.
-        </p>
+        <p class="empty-state">No hay ternas registradas.</p>
       }
     </section>
   </main>
-</div>x
+</div>
